@@ -10,5 +10,17 @@ void main() {
   const order = ['margherita', 'pepperoni', 'pineapple'];
 
   // Your code
-  
+  var total = 0.0;
+  var totalPrice;
+  var pizza;
+  for (pizza in order) {
+    if (pizzaPrices.containsKey(pizza)) {
+      var price = pizzaPrices[pizza];
+      total += price as double;
+    } else {
+      print('$pizza is not in the menu');
+    }
+  }
+  totalPrice = total.toStringAsFixed(0);
+  print('Total: \$$totalPrice');
 }
