@@ -14,7 +14,9 @@ void main() {
   var totalPrice;
   var pizza;
   for (pizza in order) {
+    // print(pizza);
     if (pizzaPrices.containsKey(pizza)) {
+      // print(pizzaPrices[pizza]);
       var price = pizzaPrices[pizza];
       total += price as double;
     } else {
