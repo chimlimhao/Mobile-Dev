@@ -16,7 +16,7 @@ class Distance {
     return "Distance in:\n- cms: ${cms} cm\n- meters: ${meters} m\n- kms: ${kms} km";
   }
 
-  Distance operator +(covariant Distance d) {
+  Distance operator +(Distance d) {
     return Distance.cms(cms + d.cms);
   }
 }
