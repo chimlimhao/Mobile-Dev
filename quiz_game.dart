@@ -2,13 +2,31 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:google_generative_ai/google_generative_ai.dart';
 
+// Keep these outside the class
+enum Difficulty {
+  beginner(lives: 3),
+  intermediate(lives: 2),
+  advanced(lives: 1);
+
+  final int lives;
+  const Difficulty({required this.lives});
+}
+
+class Question {
+  final String question;
+  final List<String> options;
+  final int correctAnswer;
+
+  Question(this.question, this.options, this.correctAnswer);
+}
+
 class QuizGame {
   // Private attributes
   final String _apiKey;
   String _playerName = '';
   Difficulty _currentDifficulty = Difficulty.beginner;
   int _score = 0;
-  final Map<Difficulty, List<Question>> _questionBank = {};
+  final Map<Difficulty, List<Question>> _quizQuestion = {};
 
   // Constructor
   QuizGame({required String apiKey}) : _apiKey = apiKey;
@@ -122,8 +140,9 @@ class QuizGame {
     int currentLives = _currentDifficulty.lives;
 
     List<Question> questions =
-        _questionBank[_currentDifficulty] ?? await generateQuestions();
-    _questionBank[_currentDifficulty] = questions;
+        _quizQuestion[_currentDifficulty] ?? await generateQuestions();
+    _quizQuestion[_currentDifficulty] = questions;
+    // print(_quizQuestion);
 
     for (int i = 0; i < questions.length; i++) {
       if (currentLives <= 0) break;
@@ -189,24 +208,6 @@ class QuizGame {
     await startGame();
     print('Thanks for playing, $_playerName!');
   }
-}
-
-// Keep these outside the class
-enum Difficulty {
-  beginner(lives: 3),
-  intermediate(lives: 2),
-  advanced(lives: 1);
-
-  final int lives;
-  const Difficulty({required this.lives});
-}
-
-class Question {
-  final String question;
-  final List<String> options;
-  final int correctAnswer;
-
-  Question(this.question, this.options, this.correctAnswer);
 }
 
 void main() async {
