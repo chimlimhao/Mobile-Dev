@@ -1,9 +1,0 @@
-name: quiz_game
-
-dependencies:
-  google_generative_ai: ^0.2.0
-  dart_console: ^1.2.0
-  dotenv: ^4.1.0
-
-environment:
-  sdk: '^3.5.0'
