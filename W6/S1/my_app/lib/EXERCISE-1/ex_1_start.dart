@@ -12,10 +12,11 @@ void main() {
           children: [
             const Label("Method 1: Loop in Array", bold: true),
             // TODO
-            for (var color in colors) Label(color),
+            // for (var color in colors) Label(color),
+            for (var color in colors) Text(color),
             const Label("Method 2: Map", bold: true),
             // TODO
-            ...colors.map((color) => Label(color)).toList(),
+            ...colors.map((color) => Label(color)),
             const Label("Method 3: Dedicated Function", bold: true),
             // TODO
             ...getColorLabels(),

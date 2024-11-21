@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:my_app/EXERCISE-3/screen/welcome.dart';
 import 'package:my_app/EXERCISE-3/screen/temperature.dart';
 
+enum Screen { welcome, temperature }
+
 class TemperatureApp extends StatefulWidget {
   const TemperatureApp({super.key});
 
@@ -12,11 +14,11 @@ class TemperatureApp extends StatefulWidget {
 }
 
 class _TemperatureAppState extends State<TemperatureApp> {
-  var currentScreen = 'welcome';
+  Screen currentScreen = Screen.welcome;
 
   void switchScreen() {
     setState(() {
-      currentScreen = 'temperature';
+      currentScreen = Screen.temperature;
     });
   }
 
@@ -35,7 +37,7 @@ class _TemperatureAppState extends State<TemperatureApp> {
               end: Alignment.bottomRight,
             ),
           ),
-          child: currentScreen == 'welcome'
+          child: currentScreen == Screen.welcome
               ? Welcome(onStartPressed: switchScreen)
               : Temperature(),
         ),

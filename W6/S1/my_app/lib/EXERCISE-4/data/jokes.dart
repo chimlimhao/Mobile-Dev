@@ -19,5 +19,76 @@ final List<Joke> jokes = [
     title: "What's a programmer's favorite place?",
     description: "Foo Bar",
   ),
-  // Add more jokes...
+  Joke(
+    title: "What's a programmer's favorite place?",
+    description: "Foo Bar",
+  ),
+  Joke(
+    title: "What's a programmer's favorite place?",
+    description: "Foo Bar",
+  ),
+  Joke(
+    title: "What's a programmer's favorite place?",
+    description: "Foo Bar",
+  ),
+  Joke(
+    title: "What's a programmer's favorite place?",
+    description: "Foo Bar",
+  ),
+  Joke(
+    title: "What's a programmer's favorite place?",
+    description: "Foo Bar",
+  ),
+  Joke(
+    title: "What's a programmer's favorite place?",
+    description: "Foo Bar",
+  ),
+  Joke(
+    title: "What's a programmer's favorite place?",
+    description: "Foo Bar",
+  ),
+  Joke(
+    title: "What's a programmer's favorite place?",
+    description: "Foo Bar",
+  ),
+  Joke(
+    title: "What's a programmer's favorite place?",
+    description: "Foo Bar",
+  ),
+  Joke(
+    title: "What's a programmer's favorite place?",
+    description: "Foo Bar",
+  ),
+  Joke(
+    title: "What's a programmer's favorite place?",
+    description: "Foo Bar",
+  ),
+  Joke(
+    title: "What's a programmer's favorite place?",
+    description: "Foo Bar",
+  ),
+  Joke(
+    title: "What's a programmer's favorite place?",
+    description: "Foo Bar",
+  ),
+  Joke(
+    title: "What's a programmer's favorite place?",
+    description: "Foo Bar",
+  ),
+  Joke(
+    title: "What's a programmer's favorite place?",
+    description: "Foo Bar",
+  ),
+  Joke(
+    title: "What's a programmer's favorite place?",
+    description: "Foo Bar",
+  ),
+  Joke(
+    title: "What's a programmer's favorite place?",
+    description: "Foo Bar",
+  ),
+  Joke(
+    title: "What's a programmer's favorite place?",
+    description: "Foo Bar",
+  ),
 ];
