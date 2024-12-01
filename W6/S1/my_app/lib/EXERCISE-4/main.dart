@@ -73,6 +73,8 @@ class _FavoriteCardState extends State<FavoriteCard> {
 }
 
 class JokesList extends StatefulWidget {
+  const JokesList({super.key});
+
   @override
   State<JokesList> createState() => _JokesListState();
 }
