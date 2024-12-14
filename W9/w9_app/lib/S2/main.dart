@@ -1,100 +1,116 @@
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const MaterialApp(
+      title: 'Navigation Demo',
       home: HomeScreen(),
     );
   }
 }
 
-class HomeScreen extends StatefulWidget {
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
 
-class _HomeScreenState extends State<HomeScreen> {
-  final _formGlobalKey = GlobalKey<FormState>();
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Home'),
-        backgroundColor: Colors.blue,
+        automaticallyImplyLeading: false,
+        title: const Text('Home Screen'),
       ),
-      body: Container(
-        padding: const EdgeInsets.all(20),
-        child: Center(
-          child: Form(
-            key: _formGlobalKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                //title field
-                TextFormField(
-                  maxLength: 50,
-                  decoration: const InputDecoration(
-                    labelText: 'Title',
-                  ),
-                  validator: (value) {
-                    if (value!.isEmpty) {
-                      return 'Title is required';
-                    }
-                    return null;
-                  },
-                ),
-
-                // description field
-                TextFormField(
-                  maxLength: 100,
-                  decoration: const InputDecoration(
-                    labelText: 'Description',
-                  ),
-                  validator: (value) {
-                    if (value!.isEmpty) {
-                      return 'Description is required';
-                    } else if (value.length < 10) {
-                      return 'Description must be at least 10 characters';
-                    }
-                    return null;
-                  },
-                ),
-
-                // amount field
-                TextFormField(
-                  decoration: const InputDecoration(
-                    labelText: 'Amount',
-                  ),
-                  validator: (value) {
-                    if (value!.isEmpty) {
-                      return 'Amount is required';
-                    } else if (value.length < 3) {
-                      return 'Amount must be at least 3 digits';
-                    }
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 50),
-                //submit button
-                ElevatedButton(
-                  onPressed: () {
-                    if (_formGlobalKey.currentState!.validate()) {
-                      print('Form is valid');
-                    } else {
-                      print('Form is invalid');
-                    }
-                  },
-                  child: const Text('Submit'),
-                ),
-              ],
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('This is the Home Screen'),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SecondScreen()),
+                );
+              },
+              child: const Text('Go to Second Screen'),
             ),
-          ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class SecondScreen extends StatelessWidget {
+  const SecondScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Second Screen'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('This is the Second Screen'),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Back to Home Screen'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const ThirdScreen()),
+                );
+              },
+              child: const Text('Go to Third Screen'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ThirdScreen extends StatelessWidget {
+  const ThirdScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Third Screen'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('This is the Third Screen'),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Back to Second Screen'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const HomeScreen()),
+                );
+              },
+              child: const Text('Back to Home Screen'),
+            ),
+          ],
         ),
       ),
     );
