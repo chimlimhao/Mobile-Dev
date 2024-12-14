@@ -10,5 +10,6 @@ class Expense {
   final double price;
   final DateTime date;
 
-  Expense({required this.title, required this.price, required this.date}): this.id = uuid.v4();
+  Expense({required this.title, required this.price, required this.date})
+      : id = uuid.v4();
 }

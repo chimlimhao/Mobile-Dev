@@ -58,6 +58,133 @@ final List<Job> dummyJobs = [
     experienceLevel: ExperienceLevel.senior,
     profession: Profession.uiDesigner,
   ),
+  Job(
+    id: '4',
+    title: 'React Native Developer',
+    description:
+        'Join our team to build cross-platform mobile applications using React Native.',
+    location: 'Austin, TX',
+    company: 'TechCorp',
+    jobType: JobType.fullTime,
+    salary: '\$90,000 - \$120,000',
+    requirements: [
+      'React Native experience',
+      'JavaScript expertise',
+      'Mobile development background'
+    ],
+    isRemote: true,
+    experienceLevel: ExperienceLevel.intermediate,
+    profession: Profession.mobileDev,
+  ),
+  Job(
+    id: '5',
+    title: 'Junior Mobile Developer',
+    description:
+        'Great opportunity for recent graduates to start their mobile development career.',
+    location: 'Seattle, WA',
+    company: 'StartupX',
+    jobType: JobType.fullTime,
+    salary: '\$65,000 - \$80,000',
+    requirements: [
+      'CS Degree',
+      'Basic mobile development knowledge',
+      'Strong learning attitude'
+    ],
+    isRemote: false,
+    experienceLevel: ExperienceLevel.entry,
+    profession: Profession.mobileDev,
+  ),
+  Job(
+    id: '6',
+    title: 'Mobile UI/UX Designer',
+    description:
+        'Design beautiful and intuitive mobile interfaces for our products.',
+    location: 'Remote',
+    company: 'DesignHub',
+    jobType: JobType.fullTime,
+    salary: '\$85,000 - \$110,000',
+    requirements: [
+      '3+ years UI design',
+      'Mobile design portfolio',
+      'Figma expertise'
+    ],
+    isRemote: true,
+    experienceLevel: ExperienceLevel.intermediate,
+    profession: Profession.uiDesigner,
+  ),
+  Job(
+    id: '7',
+    title: 'Part-time Mobile Developer',
+    description:
+        'Flexible part-time position for experienced mobile developers.',
+    location: 'Chicago, IL',
+    company: 'FlexTech',
+    jobType: JobType.partTime,
+    salary: '\$50/hour',
+    requirements: [
+      'Mobile development experience',
+      'Flexible schedule',
+      'Independent worker'
+    ],
+    isRemote: true,
+    experienceLevel: ExperienceLevel.intermediate,
+    profession: Profession.mobileDev,
+  ),
+  Job(
+    id: '8',
+    title: 'Senior Mobile Architect',
+    description:
+        'Lead our mobile development team and architect our mobile solutions.',
+    location: 'Boston, MA',
+    company: 'Enterprise Solutions',
+    jobType: JobType.fullTime,
+    salary: '\$140,000 - \$180,000',
+    requirements: [
+      '8+ years mobile development',
+      'Architecture experience',
+      'Team leadership'
+    ],
+    isRemote: false,
+    experienceLevel: ExperienceLevel.senior,
+    profession: Profession.mobileDev,
+  ),
+  Job(
+    id: '9',
+    title: 'Mobile QA Engineer',
+    description:
+        'Ensure quality of our mobile applications through manual and automated testing.',
+    location: 'Remote',
+    company: 'QualityFirst',
+    jobType: JobType.fullTime,
+    salary: '\$70,000 - \$90,000',
+    requirements: [
+      'Mobile testing experience',
+      'Automation skills',
+      'Quality mindset'
+    ],
+    isRemote: true,
+    experienceLevel: ExperienceLevel.intermediate,
+    profession: Profession.mobileDev,
+  ),
+  Job(
+    id: '10',
+    title: 'Mobile Game Developer',
+    description:
+        'Create exciting mobile games using Unity and native platforms.',
+    location: 'Los Angeles, CA',
+    company: 'GameStudio',
+    jobType: JobType.fullTime,
+    salary: '\$95,000 - \$125,000',
+    requirements: [
+      'Unity experience',
+      'Game development background',
+      '3D graphics knowledge'
+    ],
+    isRemote: false,
+    experienceLevel: ExperienceLevel.intermediate,
+    profession: Profession.mobileDev,
+  ),
+  // Add more jobs as needed...
 ];
 
 final List<User> dummyUsers = [
