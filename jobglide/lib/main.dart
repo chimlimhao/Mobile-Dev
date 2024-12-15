@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:jobglide/screens/auth/login_screen.dart';
+import 'package:jobglide/screens/main/job_screen.dart';
+import 'package:jobglide/screens/main/preferences_screen.dart';
 import 'package:jobglide/screens/splash_screen.dart';
 
 void main() {
@@ -19,7 +22,13 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const SplashScreen(),
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const SplashScreen(),
+        '/login': (context) => const LoginScreen(),
+        '/home': (context) => const JobScreen(),
+        '/preferences': (context) => const PreferencesScreen(),
+      },
     );
   }
 }

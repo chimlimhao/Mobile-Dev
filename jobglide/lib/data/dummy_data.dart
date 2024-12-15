@@ -184,6 +184,25 @@ final List<Job> dummyJobs = [
     experienceLevel: ExperienceLevel.intermediate,
     profession: Profession.mobileDev,
   ),
+  Job(
+    id: '11',
+    title: 'Junior UI Designer',
+    description:
+        'Looking for an experienced UI designer to lead our design team and create beautiful mobile experiences.',
+    location: 'Remote',
+    company: 'DesignCo',
+    companyLogo: 'assets/images/company3.png',
+    jobType: JobType.fullTime,
+    salary: '\$120,000 - \$150,000',
+    requirements: [
+      'At least 5 years of UI design experience',
+      'Strong portfolio of mobile apps',
+      'Team leadership experience'
+    ],
+    isRemote: true,
+    experienceLevel: ExperienceLevel.senior,
+    profession: Profession.uiDesigner,
+  ),
   // Add more jobs as needed...
 ];
 

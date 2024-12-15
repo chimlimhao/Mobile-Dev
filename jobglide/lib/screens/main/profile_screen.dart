@@ -29,13 +29,21 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Profile',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        automaticallyImplyLeading: false,
+        title: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Center(
+              child: Text(
+                'Profile',  
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            )
+          ],
+        ) 
       ),
       body: ListView(
         children: [
@@ -135,7 +143,7 @@ class ProfileScreen extends StatelessWidget {
                               MaterialPageRoute(
                                 builder: (context) => const LoginScreen(),
                               ),
-                              (route) => false,
+                              (route) => '/login' == route.settings.name,
                             );
                           },
                           child: const Text(

@@ -93,7 +93,7 @@ class JobCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   FloatingActionButton(
-                    heroTag: 'skip_button_${job.id}',
+                    heroTag: 'skip_button_${job.id}_${isTop ? 'top' : 'stack'}',
                     onPressed: () {
                       swiperController.swipe(CardSwiperDirection.left);
                     },
@@ -101,7 +101,7 @@ class JobCard extends StatelessWidget {
                     child: const Icon(Icons.close, color: Colors.red),
                   ),
                   FloatingActionButton(
-                    heroTag: 'apply_button_${job.id}',
+                    heroTag: 'apply_button_${job.id}_${isTop ? 'top' : 'stack'}',
                     onPressed: () {
                       swiperController.swipe(CardSwiperDirection.right);
                     },
