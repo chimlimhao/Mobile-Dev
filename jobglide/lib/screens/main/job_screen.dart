@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:jobglide/models/model.dart';
+import 'package:jobglide/screens/main/profile_screen.dart';
 import 'package:jobglide/widgets/job_card.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:jobglide/data/dummy_data.dart';
 import 'package:jobglide/services/preferences_service.dart';
+import 'applications_screen.dart';
 
 class JobScreen extends StatefulWidget {
   const JobScreen({super.key});
@@ -14,19 +16,23 @@ class JobScreen extends StatefulWidget {
 
 class _JobScreenState extends State<JobScreen> {
   int _selectedIndex = 0;
+  List<Job> appliedJobs = [];
+
+  void updateAppliedJobs(Job job) {
+    setState(() {
+      appliedJobs.add(job);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('JobGlide'),
-      ),
       body: IndexedStack(
         index: _selectedIndex,
-        children: const [
-          JobListView(),
-          Center(child: Text('Applications')),
-          Center(child: Text('Profile')),
+        children: [
+          JobListView(onJobApplied: updateAppliedJobs),
+          ApplicationsScreen(appliedJobs: appliedJobs),
+          const ProfileScreen(),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -59,7 +65,8 @@ class _JobScreenState extends State<JobScreen> {
 }
 
 class JobListView extends StatefulWidget {
-  const JobListView({super.key});
+  final Function(Job) onJobApplied;
+  const JobListView({super.key, required this.onJobApplied});
 
   @override
   State<JobListView> createState() => _JobListViewState();
@@ -81,13 +88,25 @@ class _JobListViewState extends State<JobListView> {
     }).toList();
   }
 
-  void _handleSwipeLeft() {
-    // Do nothing on reject
+  void onSwipeLeft() {
+    // Check if there are any jobs to skip
+    if (_jobs.isNotEmpty) {
+      final job = _jobs.first; // Get the first job or handle accordingly
+      print('Job skipped: ${job.title}');
+      // Optionally, remove the job from the list if you want to update the UI
+      setState(() {
+        _jobs.removeAt(0); // Remove the job from the list
+      });
+    } else {
+      print('No jobs to skip');
+    }
   }
 
-  void _handleSwipeRight(Job job) {
+  void onSwipeRight(Job job) {
     // Add to applied jobs
     dummyUsers[0].appliedJobs.add(job.id);
+    print('Job applied: ${_jobs.first.title}');
+    widget.onJobApplied(job);
   }
 
   @override
@@ -98,74 +117,89 @@ class _JobListViewState extends State<JobListView> {
       );
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: SafeArea(
-        child: Column(
+    return Scaffold(
+        appBar: AppBar(
+            title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Expanded(
-              child: CardSwiper(
-                cardBuilder: (context, index, horizontalThresholdPercentage,
-                    verticalThresholdPercentage) {
-                  return JobCard(
-                    job: _jobs[index],
-                    isTop: index == 0,
-                    onSwipeLeft: _handleSwipeLeft,
-                    onSwipeRight: () => _handleSwipeRight(_jobs[index]),
-                  );
-                },
-                controller: _swiperController,
-                cardsCount: _jobs.length,
-                onSwipe: (previousIndex, currentIndex, direction) async {
-                  if (direction == CardSwiperDirection.right) {
-                    bool shouldShow =
-                        await PreferencesService.shouldShowApplyConfirmation();
-                    if (shouldShow) {
-                      bool? confirmed =
-                          await _showApplyConfirmation(_jobs[previousIndex]);
-                      if (confirmed == true) {
-                        _handleSwipeRight(_jobs[previousIndex]);
-                      }
-                    } else {
-                      _handleSwipeRight(_jobs[previousIndex]);
-                    }
-                  } else if (direction == CardSwiperDirection.left) {
-                    _handleSwipeLeft();
-                  }
-                  return true;
-                },
-                numberOfCardsDisplayed: 3,
-                backCardOffset: const Offset(0, 0),
-                padding: EdgeInsets.zero,
-                isDisabled: false,
-                allowedSwipeDirection:
-                    AllowedSwipeDirection.only(left: true, right: true),
+            Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.star, size: 20, color: Colors.amber[700]),
+                    const SizedBox(width: 4),
+                    const Text('5',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold))
+                  ],
+                )),
+            const Text(
+              'JobGlide',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  FloatingActionButton(
-                    onPressed: () =>
-                        _swiperController.swipe(CardSwiperDirection.left),
-                    backgroundColor: Colors.white,
-                    child: const Icon(Icons.close, color: Colors.red),
-                  ),
-                  FloatingActionButton(
-                    onPressed: () =>
-                        _swiperController.swipe(CardSwiperDirection.right),
-                    backgroundColor: Colors.white,
-                    child: const Icon(Icons.check, color: Colors.green),
-                  ),
-                ],
-              ),
-            ),
+            IconButton(
+              icon: const Icon(Icons.tune),
+              onPressed: () {},
+            )
           ],
-        ),
-      ),
-    );
+        )),
+        body: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: SafeArea(
+            child: Column(
+              children: [
+                Expanded(
+                  child: CardSwiper(
+                    cardBuilder: (context, index, horizontalThresholdPercentage,
+                        verticalThresholdPercentage) {
+                      return JobCard(
+                        job: _jobs[index],
+                        isTop: index == 0,
+                        onSwipeLeft: onSwipeLeft,
+                        onSwipeRight: () => onSwipeRight(_jobs[index]),
+                        swiperController: _swiperController,
+                      );
+                    },
+                    controller: _swiperController,
+                    cardsCount: _jobs.length,
+                    onSwipe: (previousIndex, currentIndex, direction) async {
+                      if (direction == CardSwiperDirection.right) {
+                        bool shouldShow = await PreferencesService
+                            .shouldShowApplyConfirmation();
+                        if (shouldShow) {
+                          bool? confirmed = await _showApplyConfirmation(
+                              _jobs[previousIndex]);
+                          if (confirmed == true) {
+                            onSwipeRight(_jobs[previousIndex]);
+                          }
+                        } else {
+                          onSwipeRight(_jobs[previousIndex]);
+                        }
+                      } else if (direction == CardSwiperDirection.left) {
+                        onSwipeLeft();
+                      }
+                      return true;
+                    },
+                    numberOfCardsDisplayed: 3,
+                    backCardOffset: const Offset(0, 0),
+                    padding: EdgeInsets.zero,
+                    isDisabled: false,
+                    allowedSwipeDirection:
+                        AllowedSwipeDirection.only(left: true, right: true),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ));
   }
 
   Future<bool?> _showApplyConfirmation(Job job) async {

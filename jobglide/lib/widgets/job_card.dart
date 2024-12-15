@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:jobglide/models/model.dart';
 import 'package:jobglide/services/preferences_service.dart';
+import 'package:jobglide/screens/main/job_screen.dart';
 
 class JobCard extends StatelessWidget {
   final Job job;
   final bool isTop;
   final VoidCallback onSwipeLeft;
   final VoidCallback onSwipeRight;
+  final CardSwiperController swiperController;
 
   const JobCard({
     required this.job,
     required this.isTop,
     required this.onSwipeLeft,
     required this.onSwipeRight,
+    required this.swiperController,
     super.key,
   });
 
@@ -82,6 +86,30 @@ class JobCard extends StatelessWidget {
                   ),
                 );
               }).toList(),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 24),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  FloatingActionButton(
+                    heroTag: 'skip_button_${job.id}',
+                    onPressed: () {
+                      swiperController.swipe(CardSwiperDirection.left);
+                    },
+                    backgroundColor: Colors.white,
+                    child: const Icon(Icons.close, color: Colors.red),
+                  ),
+                  FloatingActionButton(
+                    heroTag: 'apply_button_${job.id}',
+                    onPressed: () {
+                      swiperController.swipe(CardSwiperDirection.right);
+                    },
+                    backgroundColor: Colors.white,
+                    child: const Icon(Icons.check, color: Colors.green),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

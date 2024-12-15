@@ -8,9 +8,18 @@ class ApplicationsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (appliedJobs.isEmpty) {
+      return const Center(child: Text('No applications yet'));
+    }
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Applications'),
+        title: const Text(
+          'Application',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
@@ -20,6 +29,8 @@ class ApplicationsScreen extends StatelessWidget {
           return ListTile(
             title: Text(job.title),
             subtitle: Text(job.company),
+            trailing: const Text('Applied'),
+            onTap: () {},
           );
         },
       ),
