@@ -1,237 +1,154 @@
 import 'package:flutter/material.dart';
 import 'package:jobglide/models/model.dart';
 import 'package:jobglide/screens/main/job_screen.dart';
+import 'package:jobglide/services/auth_service.dart';
+import 'package:jobglide/widgets/auto_apply_modal.dart';
 
 class UserPreferencesStep extends StatefulWidget {
-  final VoidCallback? onNext;
-  const UserPreferencesStep({this.onNext, super.key});
+  final VoidCallback onNext;
+
+  const UserPreferencesStep({
+    super.key,
+    required this.onNext,
+  });
 
   @override
   State<UserPreferencesStep> createState() => _UserPreferencesStepState();
 }
 
 class _UserPreferencesStepState extends State<UserPreferencesStep> {
-  Profession? _selectedProfession;
-  ExperienceLevel? _selectedExperience;
-  final List<JobType> _selectedJobTypes = [];
+  final List<JobType> _selectedJobTypes = [JobType.fullTime];
+  String _profession = 'Software Developer';
   bool _remoteOnly = false;
-  final TextEditingController _locationController = TextEditingController();
-  final TextEditingController _salaryController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
 
-  bool get _canContinue =>
-      _selectedProfession != null ||
-      _selectedExperience != null ||
-      _selectedJobTypes.isNotEmpty ||
-      _locationController.text.isNotEmpty ||
-      _salaryController.text.isNotEmpty ||
-      _remoteOnly;
+  Future<void> _savePreferencesAndShowModal() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-        ),
+    // Save user preferences
+    final userPrefs = UserPreferences(
+      profession: _profession,
+      remoteOnly: _remoteOnly,
+      preferredJobTypes: _selectedJobTypes,
+    );
+    await AuthService.updateUserPreferences(userPrefs);
+
+    if (!mounted) return;
+
+    // Show auto-apply modal
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AutoApplyModal(
+        onChoice: (enableAutoApply) async {
+          // Save auto-apply preference
+          await AuthService.setAutoApplyEnabled(enableAutoApply);
+          
+          if (!mounted) return;
+          
+          // Navigate to main screen
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const JobScreen()),
+            (route) => false,
+          );
+        },
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Almost there!\nTell us your preferences',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Profession Dropdown
-                _buildSectionTitle('What is your profession?'),
-                DropdownButtonFormField<Profession>(
-                  value: _selectedProfession,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  ),
-                  hint: const Text('Select your profession'),
-                  items: Profession.values.map((profession) {
-                    return DropdownMenuItem(
-                      value: profession,
-                      child: Text(profession.toDisplayString()),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedProfession = value;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Experience Level Dropdown
-                _buildSectionTitle('Experience Level'),
-                DropdownButtonFormField<ExperienceLevel>(
-                  value: _selectedExperience,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  ),
-                  hint: const Text('Select your experience level'),
-                  items: ExperienceLevel.values.map((level) {
-                    return DropdownMenuItem(
-                      value: level,
-                      child: Text(level.toDisplayString()),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedExperience = value;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Job Types Multi-Select
-                _buildSectionTitle('Preferred Job Types'),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: JobType.values.map((type) {
-                    final isSelected = _selectedJobTypes.contains(type);
-                    return FilterChip(
-                      selected: isSelected,
-                      label: Text(type.toDisplayString()),
-                      onSelected: (selected) {
-                        setState(() {
-                          if (selected) {
-                            _selectedJobTypes.add(type);
-                          } else {
-                            _selectedJobTypes.remove(type);
-                          }
-                        });
-                      },
-                      selectedColor: Colors.blue.shade100,
-                      checkmarkColor: Colors.blue,
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 16),
-
-                // Location Input
-                _buildSectionTitle('Preferred Location'),
-                TextField(
-                  controller: _locationController,
-                  decoration: const InputDecoration(
-                    hintText: 'Enter your preferred location',
-                    border: OutlineInputBorder(),
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Expected Salary
-                _buildSectionTitle('Expected Salary'),
-                TextField(
-                  controller: _salaryController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    hintText: 'Enter your expected salary',
-                    border: OutlineInputBorder(),
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Remote Only Switch
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Remote Only',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Switch(
-                      value: _remoteOnly,
-                      onChanged: (value) {
-                        setState(() {
-                          _remoteOnly = value;
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, -5),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Set Your Preferences',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
               ),
-            ],
-          ),
-          child: SafeArea(
-            child: SizedBox(
+            ),
+            const SizedBox(height: 24),
+            
+            // Profession
+            TextFormField(
+              decoration: const InputDecoration(
+                labelText: 'Profession',
+                hintText: 'Enter your profession',
+                border: OutlineInputBorder(),
+              ),
+              initialValue: _profession,
+              onChanged: (value) => _profession = value,
+              validator: (value) {
+                if (value?.isEmpty ?? true) {
+                  return 'Please enter your profession';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 24),
+            
+            // Job Types
+            const Text(
+              'Preferred Job Types',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: JobType.values.map((type) {
+                final isSelected = _selectedJobTypes.contains(type);
+                return FilterChip(
+                  label: Text(type.toDisplayString()),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setState(() {
+                      if (selected) {
+                        _selectedJobTypes.add(type);
+                      } else if (_selectedJobTypes.length > 1) {
+                        _selectedJobTypes.remove(type);
+                      }
+                    });
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 24),
+            
+            // Remote Only
+            SwitchListTile(
+              title: const Text('Remote Only'),
+              value: _remoteOnly,
+              onChanged: (value) {
+                setState(() {
+                  _remoteOnly = value;
+                });
+              },
+            ),
+            const SizedBox(height: 32),
+            
+            // Next Button
+            SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _canContinue
-                    ? () {
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(
-                            builder: (context) => const JobScreen(),
-                          ),
-                        );
-                      }
-                    : null,
+                onPressed: _savePreferencesAndShowModal,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  padding: const EdgeInsets.all(16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                child: const Text(
-                  'Finish',
-                  style: TextStyle(color: Colors.white),
-                ),
+                child: const Text('Continue'),
               ),
             ),
-          ),
+          ],
         ),
-      ],
+      ),
     );
-  }
-
-  @override
-  void dispose() {
-    _locationController.dispose();
-    _salaryController.dispose();
-    super.dispose();
   }
 }
