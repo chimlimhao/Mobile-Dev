@@ -256,3 +256,74 @@ class Job {
     );
   }
 }
+
+class JobFilter {
+  final String? searchQuery;
+  final List<JobType>? jobTypes;
+  final bool? remoteOnly;
+  final String? location;
+  final String? minSalary;
+  final String? maxSalary;
+
+  const JobFilter({
+    this.searchQuery,
+    this.jobTypes,
+    this.remoteOnly,
+    this.location,
+    this.minSalary,
+    this.maxSalary,
+  });
+
+  JobFilter copyWith({
+    String? searchQuery,
+    List<JobType>? jobTypes,
+    bool? remoteOnly,
+    String? location,
+    String? minSalary,
+    String? maxSalary,
+  }) {
+    return JobFilter(
+      searchQuery: searchQuery ?? this.searchQuery,
+      jobTypes: jobTypes ?? this.jobTypes,
+      remoteOnly: remoteOnly ?? this.remoteOnly,
+      location: location ?? this.location,
+      minSalary: minSalary ?? this.minSalary,
+      maxSalary: maxSalary ?? this.maxSalary,
+    );
+  }
+
+  bool matches(Job job) {
+    // Search query check
+    if (searchQuery?.isNotEmpty ?? false) {
+      final query = searchQuery!.toLowerCase();
+      if (!job.title.toLowerCase().contains(query) &&
+          !job.company.toLowerCase().contains(query) &&
+          !job.description.toLowerCase().contains(query)) {
+        return false;
+      }
+    }
+
+    // Job type check
+    if (jobTypes?.isNotEmpty ?? false) {
+      if (!jobTypes!.contains(job.jobType)) {
+        return false;
+      }
+    }
+
+    // Remote work check
+    if (remoteOnly ?? false) {
+      if (!job.isRemote) {
+        return false;
+      }
+    }
+
+    // Location check
+    if (location?.isNotEmpty ?? false) {
+      if (!job.location.toLowerCase().contains(location!.toLowerCase())) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+}

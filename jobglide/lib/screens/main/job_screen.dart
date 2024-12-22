@@ -1,13 +1,15 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:jobglide/models/model.dart';
-import 'package:jobglide/screens/main/profile_screen.dart';
-import 'package:jobglide/widgets/job_filter_dialog.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
-import 'package:jobglide/data/dummy_data.dart';
+import 'package:jobglide/models/model.dart';
 import 'package:jobglide/services/auth_service.dart';
+import 'package:jobglide/widgets/job_filter_dialog.dart';
+import 'package:jobglide/widgets/job_swiper.dart';
+import 'package:jobglide/data/dummy_data.dart';
 import 'package:jobglide/services/application_service.dart';
 import 'applications_screen.dart';
+import 'package:jobglide/screens/main/preferences_screen.dart';
+import 'package:jobglide/screens/main/profile_screen.dart';
 
 class JobScreen extends StatefulWidget {
   const JobScreen({super.key});
@@ -62,31 +64,57 @@ class _JobScreenState extends State<JobScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: [
-          JobListView(onJobStatusChanged: _updateJobStatus),
-          ApplicationsScreen(
-            savedJobs: _savedJobs,
-            appliedJobs: _appliedJobs,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.grey.shade100,
+              Colors.white,
+            ],
           ),
-          const ProfileScreen(),
-        ],
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: IndexedStack(
+              index: _selectedIndex,
+              children: [
+                JobListView(
+                  onJobStatusChanged: _updateJobStatus,
+                ),
+                ApplicationsScreen(
+                  savedJobs: _savedJobs,
+                  appliedJobs: _appliedJobs,
+                  onJobStatusChanged: _updateJobStatus,
+                ),
+                const ProfileScreen(),
+              ],
+            ),
+          ),
+        ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.work),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.work_outline),
+            selectedIcon: Icon(Icons.work),
             label: 'Jobs',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.list_alt),
+          NavigationDestination(
+            icon: Icon(Icons.folder_outlined),
+            selectedIcon: Icon(Icons.folder),
             label: 'Applications',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
             label: 'Profile',
           ),
         ],
@@ -113,6 +141,22 @@ class _JobListViewState extends State<JobListView> {
   List<Job> _filteredJobs = [];
   JobFilter _currentFilter = const JobFilter();
   bool _isLoading = true;
+
+  void _handleJobApplication(Job job) {
+    ApplicationService.applyToJob(
+      context,
+      job,
+      onApplicationComplete: (bool applied) {
+        if (applied) {
+          setState(() {
+            _allJobs.remove(job);
+            _filteredJobs.remove(job);
+          });
+          widget.onJobStatusChanged(job, JobStatus.applied);
+        }
+      },
+    );
+  }
 
   @override
   void initState() {
@@ -156,14 +200,17 @@ class _JobListViewState extends State<JobListView> {
     setState(() {
       _filteredJobs = _allJobs.where((job) {
         // Check job type filter
-        if (_currentFilter.jobTypes.isNotEmpty &&
-            !_currentFilter.jobTypes.contains(job.jobType)) {
-          return false;
+        if (_currentFilter.jobTypes?.isNotEmpty ?? false) {
+          if (!(_currentFilter.jobTypes?.contains(job.jobType) ?? false)) {
+            return false;
+          }
         }
 
         // Check remote only filter
-        if (_currentFilter.remoteOnly && !job.isRemote) {
-          return false;
+        if (_currentFilter.remoteOnly ?? false) {
+          if (!job.isRemote) {
+            return false;
+          }
         }
 
         // Check search query
@@ -184,6 +231,12 @@ class _JobListViewState extends State<JobListView> {
       context: context,
       builder: (context) => JobFilterDialog(
         initialFilter: _currentFilter,
+        onApply: (filter) {
+          setState(() {
+            _currentFilter = filter;
+            _applyFilter();
+          });
+        },
       ),
     );
 
@@ -196,17 +249,13 @@ class _JobListViewState extends State<JobListView> {
   }
 
   Future<void> _onSwipeRight(Job job) async {
-    final isAutoApplyEnabled = AuthService.isAutoApplyEnabled();
-    final status = isAutoApplyEnabled ? JobStatus.applied : JobStatus.saved;
-    
-    await AuthService.updateJobStatus(job.id, status);
-    widget.onJobStatusChanged(job, status);
-    
-    // Remove the job from both lists
-    setState(() {
-      _allJobs.remove(job);
-      _filteredJobs.remove(job);
-    });
+    if (AuthService.isAutoApplyEnabled()) {
+      _handleJobApplication(job);
+    } else {
+      setState(() {
+        widget.onJobStatusChanged(job, JobStatus.saved);
+      });
+    }
   }
 
   void _onSwipeLeft(Job job) {
@@ -272,194 +321,24 @@ class _JobListViewState extends State<JobListView> {
       );
     }
 
-    // Create a new list to avoid modifying the original
-    final displayJobs = List<Job>.from(_filteredJobs);
-    
-    return CardSwiper(
-      controller: _cardController,
-      cardsCount: displayJobs.length,
-      numberOfCardsDisplayed: displayJobs.isEmpty ? 0 : 1,
-      onSwipe: (previousIndex, currentIndex, direction) {
-        if (previousIndex >= displayJobs.length) return true;
-        
-        if (direction == CardSwiperDirection.right) {
-          _onSwipeRight(displayJobs[previousIndex]);
-        } else if (direction == CardSwiperDirection.left) {
-          _onSwipeLeft(displayJobs[previousIndex]);
-        }
-        return true;
-      },
-      cardBuilder: (context, index, _, __) {
-        if (index >= displayJobs.length) {
-          return const SizedBox.shrink();
-        }
-        return _buildJobCard(displayJobs[index]);
-      },
-    );
-  }
-
-  Widget _buildJobCard(Job job) {
-    // Light mint green background
-    final backgroundColor = Color(0xFFEDF3F0);
-    
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-      ),
-      color: backgroundColor,
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              job.title,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              job.company,
-              style: const TextStyle(
-                fontSize: 18,
-                color: Colors.black87,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                const Icon(Icons.location_on_outlined, size: 20, color: Colors.black54),
-                const SizedBox(width: 4),
-                Text(
-                  job.location,
-                  style: const TextStyle(
-                    color: Colors.black54,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade100,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Text(
-                    'Remote',
-                    style: TextStyle(
-                      color: Colors.black87,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade100,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    job.jobType.toString().split('.').last,
-                    style: const TextStyle(
-                      color: Colors.black87,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.purple.shade100,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Text(
-                    'Medium Sized Company',
-                    style: TextStyle(
-                      color: Colors.black87,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.shade200,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    job.salary,
-                    style: const TextStyle(
-                      color: Colors.black87,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.teal.shade100,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Text(
-                    'Technology Services',
-                    style: TextStyle(
-                      color: Colors.black87,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Text(
-                    'Bachelor\'s',
-                    style: TextStyle(
-                      color: Colors.black87,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.pink.shade100,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Text(
-                    'Senior level',
-                    style: TextStyle(
-                      color: Colors.black87,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.blue.shade100.withOpacity(0.8),  // Increased opacity and shade
+            Colors.white,
           ],
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: JobSwiper(
+          controller: _cardController,
+          jobs: _filteredJobs,
+          onSwipeRight: _onSwipeRight,
+          onSwipeLeft: _onSwipeLeft,
         ),
       ),
     );
@@ -469,38 +348,83 @@ class _JobListViewState extends State<JobListView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const Text(
-          'JobGlide',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.5,
-          ),
-        ),
-        centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.transparent,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list, size: 28),
-            onPressed: _showFilterDialog,
-          ),
-        ],
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(context).scaffoldBackgroundColor,
-              Theme.of(context).primaryColor.withOpacity(0.05),
-            ],
-          ),
+        automaticallyImplyLeading: false,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Auto Apply Toggle Button
+            Container(
+              child: Material(
+                borderRadius: BorderRadius.circular(32),
+                elevation: 0,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(32),
+                    color: Colors.grey.shade100,
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(32),
+                    onTap: () {
+                      setState(() {
+                        AuthService.setAutoApplyEnabled(!AuthService.isAutoApplyEnabled());
+                      });
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.flash_on,
+                            color: AuthService.isAutoApplyEnabled()
+                                ? Colors.amber.shade600
+                                : Colors.grey.shade400,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Auto',
+                            style: TextStyle(
+                              color: AuthService.isAutoApplyEnabled()
+                                  ? Colors.grey.shade800
+                                  : Colors.grey.shade600,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            
+            // Screen Title
+            const Text(
+              'JobGlide',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+
+            // Filter Button
+            IconButton(
+              icon: const Icon(Icons.filter_list),
+              onPressed: _showFilterDialog,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
         ),
-        child: _buildJobCards(),
       ),
+      body: _buildJobCards(),
     );
   }
 }
