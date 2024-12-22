@@ -1,32 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:jobglide/models/model.dart';
-import 'package:jobglide/services/preferences_service.dart';
-import 'package:jobglide/screens/main/job_screen.dart';
+import 'package:jobglide/widgets/job_chip.dart';
 
 class JobCard extends StatelessWidget {
   final Job job;
+  final int index;
 
   const JobCard({
-    required this.job,
     super.key,
+    required this.job,
+    required this.index,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.all(16),
-      elevation: 8,
+      elevation: 0,
+      color: Color(0xFFF0F5F0),  // Light mint color
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
       ),
-      child: Container(
-        width: MediaQuery.of(context).size.width - 32,
-        height: MediaQuery.of(context).size.height * 0.6,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: const Color(0xFF3B82F6),
-        ),
+      child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -34,106 +28,85 @@ class JobCard extends StatelessWidget {
             Text(
               job.title,
               style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+                fontSize: 26,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Text(
               job.company,
               style: const TextStyle(
                 fontSize: 18,
-                color: Colors.white,
+                fontWeight: FontWeight.w500,
+                color: Colors.black87,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Row(
               children: [
-                const Icon(Icons.location_on, color: Colors.white, size: 16),
+                const Icon(
+                  Icons.location_on_outlined,
+                  size: 18,
+                  color: Colors.black54,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   job.location,
-                  style: const TextStyle(color: Colors.white),
-                ),
-                const SizedBox(width: 16),
-                const Icon(Icons.work_outline, color: Colors.white, size: 16),
-                const SizedBox(width: 4),
-                Text(
-                  job.jobType.toDisplayString(),
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.black54,
+                  ),
                 ),
               ],
             ),
-            const Spacer(),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: job.requirements.map((req) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    req,
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<bool?> _showApplyConfirmation(BuildContext context) async {
-    bool? dontShowAgain = false;
-    return showDialog<bool>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Apply to this job?'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                  'Are you sure you want to apply to ${job.title} at ${job.company}?'),
-              const SizedBox(height: 16),
-              Row(
+            const SizedBox(height: 20),
+            Expanded(
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 12,
                 children: [
-                  Checkbox(
-                    value: dontShowAgain,
-                    onChanged: (value) {
-                      setState(() {
-                        dontShowAgain = value;
-                      });
-                    },
+                  JobChip(
+                    label: job.isRemote ? 'Remote' : 'On-site',
+                    bgColor: const Color(0xFFE3F2FD),
+                    textColor: Colors.blue.shade700,
                   ),
-                  const Text("Don't show this again"),
+                  JobChip(
+                    label: job.jobType.toDisplayString(),
+                    bgColor: const Color(0xFFE8F5E9),
+                    textColor: Colors.green.shade700,
+                  ),
+                  JobChip(
+                    label: job.profession,
+                    bgColor: const Color(0xFFF3E5F5),
+                    textColor: Colors.purple.shade700,
+                  ),
+                  JobChip(
+                    label: job.salary,
+                    bgColor: const Color(0xFFFFF8E1),
+                    textColor: Colors.amber.shade800,
+                    isWide: true,
+                  ),
                 ],
               ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
             ),
-            ElevatedButton(
-              onPressed: () async {
-                if (dontShowAgain == true) {
-                  await PreferencesService.setShowApplyConfirmation(false);
-                }
-                Navigator.of(context).pop(true);
-              },
-              child: const Text('Apply'),
+            // Back button at bottom
+            Align(
+              alignment: Alignment.bottomLeft,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.arrow_back,
+                  size: 20,
+                  color: Colors.grey.shade600,
+                ),
+              ),
             ),
           ],
         ),
