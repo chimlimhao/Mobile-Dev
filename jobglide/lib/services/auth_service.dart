@@ -1,38 +1,21 @@
 import 'package:jobglide/models/model.dart';
+import 'package:jobglide/services/storage_service.dart';
 import 'package:uuid/uuid.dart';
 
 class AuthService {
   static User? _currentUser;
-  static UserPreferences? _userPreferences;
+  static final _storage = StorageService();
+  static final  _uuid = Uuid();
 
-  static const Uuid uuid = Uuid();
-
-  // Pre-created user account
-  static final User _defaultUser = User(
-    id: uuid.v4(),
-    name: 'John Doe',
-    email: 'john@example.com',
-    appliedJobs: [],
-  );
-
-  // Pre-created user preferences
-  static final UserPreferences _defaultPreferences = UserPreferences(
-    location: 'San Francisco',
-    experienceLevel: ExperienceLevel.intermediate,
-    profession: Profession.mobileDev,
-    preferredJobTypes: [JobType.fullTime],
-    expectedSalary: '\$80,000 - \$120,000',
-    remoteOnly: true,
-  );
-
-  // Simple login with pre-created account
-  static bool login(String email, String password) {
-    if (email == 'john@example.com' && password == '123456') {
-      _currentUser = _defaultUser;
-      _userPreferences = _defaultPreferences;
-      return true;
+  // Initialize the auth service
+  static Future<void> init() async {
+    final userId = await _storage.getString('userId');
+    if (userId != null) {
+      final user = await _storage.getUser(userId);
+      if (user != null) {
+        _currentUser = user;
+      }
     }
-    return false;
   }
 
   // Get current user
@@ -40,29 +23,68 @@ class AuthService {
     return _currentUser;
   }
 
-  // Get user preferences
-  static UserPreferences? getUserPreferences() {
-    return _userPreferences;
+  // Check if user is logged in
+  static bool isLoggedIn() {
+    return _currentUser != null;
   }
 
-  // Update user preferences
-  static void updateUserPreferences(UserPreferences newPrefs) {
-    _userPreferences = newPrefs;
+  // Check if auto-apply is enabled
+  static bool isAutoApplyEnabled() {
+    return _currentUser?.autoApplyEnabled ?? false;
+  }
+
+  // Set auto-apply preference
+  static Future<void> setAutoApplyEnabled(bool enabled) async {
+    if (_currentUser != null) {
+      _currentUser = _currentUser!.copyWith(autoApplyEnabled: enabled);
+      await _storage.saveUser(_currentUser!);
+    }
+  }
+
+  // Update job status
+  static Future<void> updateJobStatus(String jobId, JobStatus status) async {
+    if (_currentUser != null) {
+      final updatedStatuses = Map<String, JobStatus>.from(_currentUser!.jobStatuses);
+      updatedStatuses[jobId] = status;
+      _currentUser = _currentUser!.copyWith(jobStatuses: updatedStatuses);
+      await _storage.saveUser(_currentUser!);
+    }
+  }
+
+  // Login user (simulated)
+  static Future<User> login(String email, String password) async {
+    // In a real app, validate credentials here
+    final userId = await _storage.getString('userId') ?? _uuid.v4();
+    await _storage.setString('userId', userId);
+
+    _currentUser = User(
+      id: userId,
+      email: email,
+      name: 'Test User',
+      autoApplyEnabled: false,
+      preferences: UserPreferences(
+        profession: 'Software Developer',
+        remoteOnly: false,
+        preferredJobTypes: [JobType.fullTime],
+      ),
+      jobStatuses: {},
+    );
+
+    await _storage.saveUser(_currentUser!);
+    return _currentUser!;
   }
 
   // Logout user
-  static void logout() {
+  static Future<void> logout() async {
     _currentUser = null;
-    _userPreferences = null;
+    await _storage.clear();
   }
 
-  // Add applied job
-  static void addAppliedJob(String jobId) {
-    _currentUser?.appliedJobs.add(jobId);
-  }
-
-  // Check if job is already applied
-  static bool hasAppliedToJob(String jobId) {
-    return _currentUser?.appliedJobs.contains(jobId) ?? false;
+  // Update user preferences
+  static Future<void> updateUserPreferences(UserPreferences preferences) async {
+    if (_currentUser != null) {
+      _currentUser = _currentUser!.copyWith(preferences: preferences);
+      await _storage.saveUser(_currentUser!);
+    }
   }
 }

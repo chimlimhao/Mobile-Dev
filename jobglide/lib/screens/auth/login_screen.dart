@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jobglide/services/auth_service.dart';
+import 'package:jobglide/models/model.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,18 +12,34 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController(text: 'john@example.com');
   final _passwordController = TextEditingController(text: '123456');
+  bool _isLoading = false;
   String? _errorMessage;
 
-  void _login() {
-    final email = _emailController.text;
-    final password = _passwordController.text;
+  Future<void> _login() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-    if (AuthService.login(email, password)) {
-      Navigator.of(context).pushReplacementNamed('/home');
-    } else {
+    try {
+      final email = _emailController.text;
+      final password = _passwordController.text;
+
+      await AuthService.login(email, password);
+      
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/home');
+      }
+    } catch (e) {
       setState(() {
         _errorMessage = 'Invalid credentials. Use john@example.com / 123456';
       });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -53,6 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.emailAddress,
+                enabled: !_isLoading,
               ),
               const SizedBox(height: 16),
               TextField(
@@ -62,6 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   border: OutlineInputBorder(),
                 ),
                 obscureText: true,
+                enabled: !_isLoading,
               ),
               if (_errorMessage != null) ...[
                 const SizedBox(height: 16),
@@ -73,11 +92,19 @@ class _LoginScreenState extends State<LoginScreen> {
               ],
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: _login,
+                onPressed: _isLoading ? null : _login,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                child: const Text('Login'),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text('Login'),
               ),
               const SizedBox(height: 16),
               const Text(

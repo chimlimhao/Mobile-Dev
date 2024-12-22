@@ -1,124 +1,258 @@
 // Enums for better type safety
-enum JobType { fullTime, partTime, internship }
+enum JobType {
+  fullTime,
+  partTime,
+  contract,
+  internship;
 
-enum ExperienceLevel { entry, intermediate, senior }
-
-enum Profession {
-  mobileDev,
-  webDev,
-  uiDesigner,
-  productManager,
-  dataScientist,
-  other
-}
-
-// Extension methods to convert enums to readable strings
-extension JobTypeString on JobType {
   String toDisplayString() {
     switch (this) {
       case JobType.fullTime:
         return 'Full Time';
       case JobType.partTime:
         return 'Part Time';
+      case JobType.contract:
+        return 'Contract';
       case JobType.internship:
         return 'Internship';
     }
   }
 }
 
-extension ExperienceLevelString on ExperienceLevel {
+enum JobStatus {
+  saved,
+  applied,
+  rejected;
+
   String toDisplayString() {
     switch (this) {
-      case ExperienceLevel.entry:
-        return 'Entry Level';
-      case ExperienceLevel.intermediate:
-        return 'Intermediate';
-      case ExperienceLevel.senior:
-        return 'Senior';
+      case JobStatus.saved:
+        return 'Saved';
+      case JobStatus.applied:
+        return 'Applied';
+      case JobStatus.rejected:
+        return 'Rejected';
     }
   }
 }
 
-extension ProfessionString on Profession {
-  String toDisplayString() {
-    switch (this) {
-      case Profession.mobileDev:
-        return 'Mobile Developer';
-      case Profession.webDev:
-        return 'Web Developer';
-      case Profession.uiDesigner:
-        return 'UI Designer';
-      case Profession.productManager:
-        return 'Product Manager';
-      case Profession.dataScientist:
-        return 'Data Scientist';
-      case Profession.other:
-        return 'Other';
-    }
+class UserPreferences {
+  final String profession;
+  final bool remoteOnly;
+  final List<JobType> preferredJobTypes;
+
+  const UserPreferences({
+    required this.profession,
+    required this.remoteOnly,
+    required this.preferredJobTypes,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'profession': profession,
+      'remoteOnly': remoteOnly,
+      'preferredJobTypes': preferredJobTypes.map((e) => e.toString().split('.').last).toList(),
+    };
+  }
+
+  factory UserPreferences.fromJson(Map<String, dynamic> json) {
+    return UserPreferences(
+      profession: json['profession'] as String,
+      remoteOnly: json['remoteOnly'] as bool,
+      preferredJobTypes: (json['preferredJobTypes'] as List)
+          .map((e) => JobType.values.firstWhere(
+                (type) => type.toString().split('.').last == e,
+              ))
+          .toList(),
+    );
+  }
+
+  UserPreferences copyWith({
+    String? profession,
+    bool? remoteOnly,
+    List<JobType>? preferredJobTypes,
+  }) {
+    return UserPreferences(
+      profession: profession ?? this.profession,
+      remoteOnly: remoteOnly ?? this.remoteOnly,
+      preferredJobTypes: preferredJobTypes ?? this.preferredJobTypes,
+    );
   }
 }
 
-// Main job listing class
+class User {
+  final String id;
+  final String email;
+  final String name;
+  final bool autoApplyEnabled;
+  final UserPreferences preferences;
+  final Map<String, JobStatus> jobStatuses;
+
+  const User({
+    required this.id,
+    required this.email,
+    required this.name,
+    required this.autoApplyEnabled,
+    required this.preferences,
+    required this.jobStatuses,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'email': email,
+      'name': name,
+      'autoApplyEnabled': autoApplyEnabled,
+      'preferences': preferences.toJson(),
+      'jobStatuses': jobStatuses.map(
+        (key, value) => MapEntry(key, value.toString().split('.').last),
+      ),
+    };
+  }
+
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      id: json['id'] as String,
+      email: json['email'] as String,
+      name: json['name'] as String,
+      autoApplyEnabled: json['autoApplyEnabled'] as bool,
+      preferences: UserPreferences.fromJson(json['preferences'] as Map<String, dynamic>),
+      jobStatuses: (json['jobStatuses'] as Map<String, dynamic>).map(
+        (key, value) => MapEntry(
+          key,
+          JobStatus.values.firstWhere(
+            (status) => status.toString().split('.').last == value,
+          ),
+        ),
+      ),
+    );
+  }
+
+  User copyWith({
+    String? id,
+    String? email,
+    String? name,
+    bool? autoApplyEnabled,
+    UserPreferences? preferences,
+    Map<String, JobStatus>? jobStatuses,
+  }) {
+    return User(
+      id: id ?? this.id,
+      email: email ?? this.email,
+      name: name ?? this.name,
+      autoApplyEnabled: autoApplyEnabled ?? this.autoApplyEnabled,
+      preferences: preferences ?? this.preferences,
+      jobStatuses: jobStatuses ?? this.jobStatuses,
+    );
+  }
+}
+
+class ApplicationMethod {
+  final String type;
+  final String value;
+  final String? instructions;
+
+  const ApplicationMethod({
+    required this.type,
+    required this.value,
+    this.instructions,
+  });
+
+  // Convert ApplicationMethod to JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'type': type,
+      'value': value,
+      'instructions': instructions,
+    };
+  }
+
+  // Create ApplicationMethod from JSON
+  factory ApplicationMethod.fromJson(Map<String, dynamic> json) {
+    return ApplicationMethod(
+      type: json['type'] as String,
+      value: json['value'] as String,
+      instructions: json['instructions'] as String?,
+    );
+  }
+}
+
 class Job {
   final String id;
   final String title;
-  final String description;
-  final String location;
   final String company;
-  final String companyLogo;
-  final JobType jobType;
-  final String salary;
+  final String location;
+  final String description;
   final List<String> requirements;
+  final JobType jobType;
   final bool isRemote;
-  final ExperienceLevel experienceLevel;
-  final Profession profession;
+  final String profession;
+  final ApplicationMethod applicationMethod;
+  final DateTime postedDate;
+  final String salary;
+  final String? companyWebsite;
+  final String? applicationStatus;  // Added for tracking application status
+  final DateTime? appliedDate;      // Added for tracking when user applied
 
-  Job({
+  const Job({
     required this.id,
     required this.title,
-    required this.description,
-    required this.location,
     required this.company,
-    this.companyLogo = '',
-    required this.jobType,
-    required this.salary,
-    required this.requirements,
-    this.isRemote = false,
-    required this.experienceLevel,
-    required this.profession,
-  });
-}
-
-// Basic user class for authentication
-class User {
-  final String id;
-  final String name;
-  final String email;
-  final List<String> appliedJobs; // Jobs swiped right (automatically applied)
-
-  User({
-    required this.id,
-    required this.name,
-    required this.email,
-    required this.appliedJobs,
-  });
-}
-
-// Separate class for user preferences that can be modified in onboarding/settings
-class UserPreferences {
-  final String location;
-  final ExperienceLevel experienceLevel;
-  final Profession profession;
-  final List<JobType> preferredJobTypes;
-  final String expectedSalary;
-  final bool remoteOnly;
-
-  UserPreferences({
     required this.location,
-    required this.experienceLevel,
+    required this.description,
+    required this.requirements,
+    required this.jobType,
+    required this.isRemote,
     required this.profession,
-    required this.preferredJobTypes,
-    required this.expectedSalary,
-    required this.remoteOnly,
+    required this.applicationMethod,
+    required this.postedDate,
+    required this.salary,
+    this.companyWebsite,
+    this.applicationStatus,
+    this.appliedDate,
   });
+
+  // Convert Job to JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'company': company,
+      'location': location,
+      'description': description,
+      'requirements': requirements.toList(),
+      'jobType': jobType.toString().split('.').last,
+      'isRemote': isRemote,
+      'profession': profession,
+      'applicationMethod': applicationMethod.toJson(),
+      'postedDate': postedDate.toIso8601String(),
+      'salary': salary,
+      'companyWebsite': companyWebsite,
+      'applicationStatus': applicationStatus,
+      'appliedDate': appliedDate?.toIso8601String(),
+    };
+  }
+
+  // Create Job from JSON
+  factory Job.fromJson(Map<String, dynamic> json) {
+    return Job(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      company: json['company'] as String,
+      location: json['location'] as String,
+      description: json['description'] as String,
+      requirements: (json['requirements'] as List).map((e) => e.toString()).toList(),
+      jobType: JobType.values.firstWhere(
+        (type) => type.toString().split('.').last == json['jobType'],
+      ),
+      isRemote: json['isRemote'] as bool,
+      profession: json['profession'] as String,
+      applicationMethod: ApplicationMethod.fromJson(json['applicationMethod'] as Map<String, dynamic>),
+      postedDate: DateTime.parse(json['postedDate'] as String),
+      salary: json['salary'] as String,
+      companyWebsite: json['companyWebsite'] as String?,
+      applicationStatus: json['applicationStatus'] as String?,
+      appliedDate: json['appliedDate'] != null ? DateTime.parse(json['appliedDate'] as String) : null,
+    );
+  }
 }

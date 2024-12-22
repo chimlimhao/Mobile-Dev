@@ -1,11 +1,12 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:jobglide/models/model.dart';
 import 'package:jobglide/screens/main/profile_screen.dart';
-import 'package:jobglide/widgets/job_card.dart';
+import 'package:jobglide/widgets/job_filter_dialog.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:jobglide/data/dummy_data.dart';
-import 'package:jobglide/services/preferences_service.dart';
 import 'package:jobglide/services/auth_service.dart';
+import 'package:jobglide/services/application_service.dart';
 import 'applications_screen.dart';
 
 class JobScreen extends StatefulWidget {
@@ -17,29 +18,45 @@ class JobScreen extends StatefulWidget {
 
 class _JobScreenState extends State<JobScreen> {
   int _selectedIndex = 0;
-  List<Job> appliedJobs = [];
+  final List<Job> _savedJobs = [];
+  final List<Job> _appliedJobs = [];
 
   @override
   void initState() {
     super.initState();
-    _loadAppliedJobs();
+    _loadJobs();
   }
 
-  void _loadAppliedJobs() {
+  void _loadJobs() {
     final user = AuthService.getCurrentUser();
     if (user != null) {
       setState(() {
-        appliedJobs = dummyJobs.where((job) => user.appliedJobs.contains(job.id)).toList();
+        _savedJobs.clear();
+        _appliedJobs.clear();
+        
+        // Sort jobs by status
+        for (final job in dummyJobs) {
+          final status = user.jobStatuses[job.id];
+          if (status == JobStatus.saved) {
+            _savedJobs.add(job);
+          } else if (status == JobStatus.applied) {
+            _appliedJobs.add(job);
+          }
+        }
       });
     }
   }
 
-  void updateAppliedJobs(Job job) {
-    if (!appliedJobs.any((j) => j.id == job.id)) {
-      setState(() {
-        appliedJobs.add(job);
-      });
-    }
+  void _updateJobStatus(Job job, JobStatus status) {
+    setState(() {
+      if (status == JobStatus.saved && !_savedJobs.contains(job)) {
+        _savedJobs.add(job);
+        _appliedJobs.remove(job);
+      } else if (status == JobStatus.applied && !_appliedJobs.contains(job)) {
+        _appliedJobs.add(job);
+        _savedJobs.remove(job);
+      }
+    });
   }
 
   @override
@@ -48,32 +65,28 @@ class _JobScreenState extends State<JobScreen> {
       body: IndexedStack(
         index: _selectedIndex,
         children: [
-          JobListView(onJobApplied: updateAppliedJobs),
-          ApplicationsScreen(appliedJobs: appliedJobs),
+          JobListView(onJobStatusChanged: _updateJobStatus),
+          ApplicationsScreen(
+            savedJobs: _savedJobs,
+            appliedJobs: _appliedJobs,
+          ),
           const ProfileScreen(),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
+        onTap: (index) => setState(() => _selectedIndex = index),
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.star_border),
-            activeIcon: Icon(Icons.star),
+            icon: Icon(Icons.work),
             label: 'Jobs',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.work_outline),
-            activeIcon: Icon(Icons.work),
+            icon: Icon(Icons.list_alt),
             label: 'Applications',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
+            icon: Icon(Icons.person),
             label: 'Profile',
           ),
         ],
@@ -83,271 +96,369 @@ class _JobScreenState extends State<JobScreen> {
 }
 
 class JobListView extends StatefulWidget {
-  final Function(Job) onJobApplied;
-  const JobListView({super.key, required this.onJobApplied});
+  final Function(Job, JobStatus) onJobStatusChanged;
+
+  const JobListView({
+    super.key,
+    required this.onJobStatusChanged,
+  });
 
   @override
   State<JobListView> createState() => _JobListViewState();
 }
 
 class _JobListViewState extends State<JobListView> {
-  List<Job> _jobs = [];
-  late final CardSwiperController _swiperController;
+  final CardSwiperController _cardController = CardSwiperController();
+  List<Job> _allJobs = [];
+  List<Job> _filteredJobs = [];
+  JobFilter _currentFilter = const JobFilter();
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _swiperController = CardSwiperController();
     _loadJobs();
-    print('JobListView initialized');
   }
 
   @override
   void dispose() {
-    _swiperController.dispose();
+    _cardController.dispose();
     super.dispose();
   }
 
-  Future<void> onSwipeRight(Job job) async {
+  Future<void> _loadJobs() async {
+    // Simulate network delay
+    await Future.delayed(const Duration(milliseconds: 500));
+    
     final user = AuthService.getCurrentUser();
-    if (user == null) {
-      _showLoginRequired();
-      return;
-    }
-
-    bool shouldShow = await PreferencesService.shouldShowApplyConfirmation();
-    if (shouldShow) {
-      bool? confirmed = await _showApplyConfirmation(job);
-      if (confirmed != true) return;
-    }
-
-    if (!AuthService.hasAppliedToJob(job.id)) {
-      AuthService.addAppliedJob(job.id);
-      widget.onJobApplied(job);
-      
-      // Create a new list without the applied job
-      final newJobs = List<Job>.from(_jobs)..remove(job);
-      print('Jobs after removal: ${newJobs.length} jobs remaining');
-      newJobs.forEach((j) => print('- ${j.title}'));
-      
-      // Update state with new jobs list
-      setState(() {
-        _jobs = newJobs;
-      });
-    }
-  }
-
-  void onSwipeLeft() {
-    if (_jobs.isEmpty) return;
-    
-    // Create a new list without the skipped job
-    final newJobs = List<Job>.from(_jobs)..removeAt(0);
-    print('Skipped job, ${newJobs.length} jobs remaining');
-    
-    // Update state with new jobs list
-    setState(() {
-      _jobs = newJobs;
-    });
-  }
-
-  void _loadJobs() {
-    final user = AuthService.getCurrentUser();
-    final preferences = AuthService.getUserPreferences();
-    
-    if (user != null && preferences != null) {
-      // Create a new list for jobs
-      final newJobs = dummyJobs.where((job) {
-        if (user.appliedJobs.contains(job.id)) {
-          print('Job ${job.id} already applied');
-          return false;
-        }
-        
-        if (job.profession != preferences.profession) {
-          print('Job ${job.id} profession mismatch: ${job.profession} != ${preferences.profession}');
-          return false;
-        }
-        
-        if (preferences.remoteOnly && !job.isRemote) {
-          print('Job ${job.id} remote mismatch: user wants remote but job is not remote');
-          return false;
-        }
-        
-        if (preferences.preferredJobTypes.isNotEmpty && 
-            !preferences.preferredJobTypes.contains(job.jobType)) {
-          print('Job ${job.id} type mismatch: ${job.jobType} not in preferred types');
-          return false;
-        }
-        
-        print('Job ${job.id} matches all criteria: ${job.title}');
-        return true;
+    if (user != null) {
+      // Filter out jobs that user has already interacted with
+      final availableJobs = dummyJobs.where((job) {
+        final status = user.jobStatuses[job.id];
+        return status == null; // Only show jobs with no status (not saved/applied)
       }).toList();
 
       setState(() {
-        _jobs = newJobs;
-        print('Loaded ${_jobs.length} jobs matching preferences');
-        if (_jobs.isNotEmpty) {
-          print('First job: ${_jobs.first.title}');
-          _jobs.forEach((job) => print('- ${job.title} (${job.profession}, ${job.jobType}, remote: ${job.isRemote})'));
-        } else {
-          print('No jobs available');
-        }
+        _allJobs = availableJobs;
+        _applyFilter();
+        _isLoading = false;
       });
     } else {
       setState(() {
-        _jobs = [];
-        print('No user or preferences found');
+        _allJobs = dummyJobs;
+        _applyFilter();
+        _isLoading = false;
       });
     }
   }
 
+  void _applyFilter() {
+    setState(() {
+      _filteredJobs = _allJobs.where((job) {
+        // Check job type filter
+        if (_currentFilter.jobTypes.isNotEmpty &&
+            !_currentFilter.jobTypes.contains(job.jobType)) {
+          return false;
+        }
+
+        // Check remote only filter
+        if (_currentFilter.remoteOnly && !job.isRemote) {
+          return false;
+        }
+
+        // Check search query
+        if (_currentFilter.searchQuery?.isNotEmpty ?? false) {
+          final query = _currentFilter.searchQuery!.toLowerCase();
+          return job.title.toLowerCase().contains(query) ||
+              job.company.toLowerCase().contains(query) ||
+              job.description.toLowerCase().contains(query);
+        }
+
+        return true;
+      }).toList();
+    });
+  }
+
+  Future<void> _showFilterDialog() async {
+    final result = await showDialog<JobFilter>(
+      context: context,
+      builder: (context) => JobFilterDialog(
+        initialFilter: _currentFilter,
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _currentFilter = result;
+        _applyFilter();
+      });
+    }
+  }
+
+  Future<void> _onSwipeRight(Job job) async {
+    final isAutoApplyEnabled = AuthService.isAutoApplyEnabled();
+    final status = isAutoApplyEnabled ? JobStatus.applied : JobStatus.saved;
+    
+    await AuthService.updateJobStatus(job.id, status);
+    widget.onJobStatusChanged(job, status);
+    
+    // Remove the job from both lists
+    setState(() {
+      _allJobs.remove(job);
+      _filteredJobs.remove(job);
+    });
+  }
+
+  void _onSwipeLeft(Job job) {
+    // Remove the job from both lists
+    setState(() {
+      _allJobs.remove(job);
+      _filteredJobs.remove(job);
+    });
+  }
+
   Widget _buildJobCards() {
-    if (_jobs.isEmpty) {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (_filteredJobs.isEmpty) {
       return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.search_off,
-                size: 64,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.work_off,
+              size: 64,
+              color: Colors.grey,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _allJobs.isEmpty
+                  ? 'No more jobs available'
+                  : 'No jobs match your filters',
+              style: const TextStyle(
+                fontSize: 18,
                 color: Colors.grey,
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'No More Jobs Available',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _allJobs.isEmpty
+                  ? 'Check back later for new opportunities'
+                  : 'Try adjusting your filters to see more jobs',
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Try adjusting your preferences in settings to see more jobs that match your profile.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 16,
-                ),
-              ),
+            ),
+            if (_allJobs.isNotEmpty) ...[
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () async {
-                  final prefsUpdated = await Navigator.pushNamed(context, '/preferences');
-                  if (prefsUpdated == true) {
-                    _loadJobs();
-                  }
+              ElevatedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _currentFilter = const JobFilter();
+                    _applyFilter();
+                  });
                 },
-                child: const Text('Adjust Preferences'),
+                icon: const Icon(Icons.refresh),
+                label: const Text('Reset Filters'),
               ),
             ],
-          ),
+          ],
         ),
       );
     }
 
+    // Create a new list to avoid modifying the original
+    final displayJobs = List<Job>.from(_filteredJobs);
+    
     return CardSwiper(
-      cardBuilder: (context, index, horizontalThresholdPercentage,
-          verticalThresholdPercentage) {
-        if (index >= _jobs.length) return const SizedBox.shrink();
-        return JobCard(
-          job: _jobs[index],
-          isTop: index == 0,
-          onSwipeLeft: onSwipeLeft,
-          onSwipeRight: () => onSwipeRight(_jobs[index]),
-          swiperController: _swiperController,
-        );
-      },
-      controller: _swiperController,
-      cardsCount: _jobs.length,
-      onSwipe: (previousIndex, currentIndex, direction) async {
-        if (previousIndex >= _jobs.length) return true;
+      controller: _cardController,
+      cardsCount: displayJobs.length,
+      numberOfCardsDisplayed: displayJobs.isEmpty ? 0 : 1,
+      onSwipe: (previousIndex, currentIndex, direction) {
+        if (previousIndex >= displayJobs.length) return true;
         
         if (direction == CardSwiperDirection.right) {
-          await onSwipeRight(_jobs[previousIndex]);
+          _onSwipeRight(displayJobs[previousIndex]);
         } else if (direction == CardSwiperDirection.left) {
-          onSwipeLeft();
+          _onSwipeLeft(displayJobs[previousIndex]);
         }
         return true;
       },
-      numberOfCardsDisplayed: _calculateDisplayCount(_jobs.length),
-      backCardOffset: const Offset(0, -8),
-      padding: const EdgeInsets.only(bottom: 24),
-      isDisabled: false,
-      allowedSwipeDirection: AllowedSwipeDirection.only(left: true, right: true),
+      cardBuilder: (context, index, _, __) {
+        if (index >= displayJobs.length) {
+          return const SizedBox.shrink();
+        }
+        return _buildJobCard(displayJobs[index]);
+      },
     );
   }
 
-  int _calculateDisplayCount(int totalJobs) {
-    if (totalJobs == 0) return 0;
-    if (totalJobs == 1) return 1;
-    if (totalJobs == 2) return 2;
-    return 3; // Show max 3 cards for better performance and visual appeal
-  }
-
-  void _showLoginRequired() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Login Required'),
-        content: const Text('Please login to apply for jobs.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).pushNamed('/login');
-            },
-            child: const Text('Login'),
-          ),
-        ],
+  Widget _buildJobCard(Job job) {
+    // Light mint green background
+    final backgroundColor = Color(0xFFEDF3F0);
+    
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
       ),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar() {
-    return PreferredSize(
-      preferredSize: const Size.fromHeight(kToolbarHeight),
-      child: AppBar(
-        automaticallyImplyLeading: false,
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      color: backgroundColor,
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.star, size: 20, color: Colors.amber[700]),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${_jobs.length}',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)
-                  ),
-                ],
-              )),
-            const Text(
-              'JobGlide',
-              style: TextStyle(
+            Text(
+              job.title,
+              style: const TextStyle(
                 fontSize: 24,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              job.company,
+              style: const TextStyle(
+                fontSize: 18,
+                color: Colors.black87,
+                fontWeight: FontWeight.w500,
               ),
             ),
-            IconButton(
-              icon: const Icon(Icons.tune),
-              onPressed: () async {
-                final prefsUpdated = await Navigator.pushNamed(context, '/preferences');
-                if (prefsUpdated == true) {
-                  _loadJobs();
-                }
-              },
-            )
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.location_on_outlined, size: 20, color: Colors.black54),
+                const SizedBox(width: 4),
+                Text(
+                  job.location,
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade100,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Text(
+                    'Remote',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade100,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    job.jobType.toString().split('.').last,
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.shade100,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Text(
+                    'Medium Sized Company',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade200,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    job.salary,
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.teal.shade100,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Text(
+                    'Technology Services',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Text(
+                    'Bachelor\'s',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.pink.shade100,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Text(
+                    'Senior level',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -357,66 +468,38 @@ class _JobListViewState extends State<JobListView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: _buildAppBar(),
-      body: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: _buildJobCards(),
-              ),
-            ],
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const Text(
+          'JobGlide',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
           ),
         ),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.filter_list, size: 28),
+            onPressed: _showFilterDialog,
+          ),
+        ],
       ),
-    );
-  }
-
-  Future<bool?> _showApplyConfirmation(Job job) async {
-    bool? dontShowAgain = false;
-    return showDialog<bool>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Apply to this job?'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Are you sure you want to apply to ${job.title} at ${job.company}?'),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Checkbox(
-                    value: dontShowAgain,
-                    onChanged: (value) {
-                      setState(() {
-                        dontShowAgain = value;
-                      });
-                    },
-                  ),
-                  const Text("Don't show this again"),
-                ],
-              ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Theme.of(context).scaffoldBackgroundColor,
+              Theme.of(context).primaryColor.withOpacity(0.05),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (dontShowAgain == true) {
-                  await PreferencesService.setShowApplyConfirmation(false);
-                }
-                Navigator.of(context).pop(true);
-              },
-              child: const Text('Apply'),
-            ),
-          ],
         ),
+        child: _buildJobCards(),
       ),
     );
   }

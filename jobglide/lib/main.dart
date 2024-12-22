@@ -3,8 +3,19 @@ import 'package:jobglide/screens/auth/login_screen.dart';
 import 'package:jobglide/screens/main/job_screen.dart';
 import 'package:jobglide/screens/main/preferences_screen.dart';
 import 'package:jobglide/screens/splash_screen.dart';
+import 'package:jobglide/services/storage_service.dart';
+import 'package:jobglide/services/auth_service.dart';
+import 'package:jobglide/services/application_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize services
+  final storage = StorageService();
+  await storage.init();
+  await AuthService.init();
+  await ApplicationService.init();  // Initialize ApplicationService
+  
   runApp(const MyApp());
 }
 
@@ -18,7 +29,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF3B82F6), // Blue color from your design
+          seedColor: const Color(0xFF3B82F6),
         ),
         useMaterial3: true,
       ),

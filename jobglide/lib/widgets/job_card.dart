@@ -6,17 +6,9 @@ import 'package:jobglide/screens/main/job_screen.dart';
 
 class JobCard extends StatelessWidget {
   final Job job;
-  final bool isTop;
-  final VoidCallback onSwipeLeft;
-  final VoidCallback onSwipeRight;
-  final CardSwiperController swiperController;
 
   const JobCard({
     required this.job,
-    required this.isTop,
-    required this.onSwipeLeft,
-    required this.onSwipeRight,
-    required this.swiperController,
     super.key,
   });
 
@@ -24,7 +16,7 @@ class JobCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.all(16),
-      elevation: isTop ? 8 : 4,
+      elevation: 8,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
@@ -64,6 +56,13 @@ class JobCard extends StatelessWidget {
                   job.location,
                   style: const TextStyle(color: Colors.white),
                 ),
+                const SizedBox(width: 16),
+                const Icon(Icons.work_outline, color: Colors.white, size: 16),
+                const SizedBox(width: 4),
+                Text(
+                  job.jobType.toDisplayString(),
+                  style: const TextStyle(color: Colors.white),
+                ),
               ],
             ),
             const Spacer(),
@@ -86,30 +85,6 @@ class JobCard extends StatelessWidget {
                   ),
                 );
               }).toList(),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  FloatingActionButton(
-                    heroTag: 'skip_button_${job.id}_${isTop ? 'top' : 'stack'}',
-                    onPressed: () {
-                      swiperController.swipe(CardSwiperDirection.left);
-                    },
-                    backgroundColor: Colors.white,
-                    child: const Icon(Icons.close, color: Colors.red),
-                  ),
-                  FloatingActionButton(
-                    heroTag: 'apply_button_${job.id}_${isTop ? 'top' : 'stack'}',
-                    onPressed: () {
-                      swiperController.swipe(CardSwiperDirection.right);
-                    },
-                    backgroundColor: Colors.white,
-                    child: const Icon(Icons.check, color: Colors.green),
-                  ),
-                ],
-              ),
             ),
           ],
         ),
