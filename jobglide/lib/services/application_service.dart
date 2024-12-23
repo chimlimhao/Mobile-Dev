@@ -57,7 +57,7 @@ I am writing to express my interest in the ${job.title} position at ${job.compan
 
 I am ${user.preferences?.profession ?? 'a professional'} with experience in the field. Based on the job requirements, I believe my skills and experience make me a strong candidate for this role.
 
-${job.applicationMethod.instructions ?? ''}
+${job.applicationMethod.instructions ?? 'Please include your resume and portfolio in the email.'}
 
 Best regards,
 ${user.name ?? 'Applicant'}

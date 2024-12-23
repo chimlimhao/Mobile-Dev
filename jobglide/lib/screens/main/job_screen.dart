@@ -7,8 +7,9 @@ import 'package:jobglide/widgets/job_filter_dialog.dart';
 import 'package:jobglide/widgets/job_swiper.dart';
 import 'package:jobglide/data/dummy_data.dart';
 import 'package:jobglide/services/application_service.dart';
+import 'package:jobglide/widgets/job_app_bar.dart';
+import 'package:jobglide/widgets/job_content.dart';
 import 'applications_screen.dart';
-import 'package:jobglide/screens/main/preferences_screen.dart';
 import 'package:jobglide/screens/main/profile_screen.dart';
 
 class JobScreen extends StatefulWidget {
@@ -266,165 +267,19 @@ class _JobListViewState extends State<JobListView> {
     });
   }
 
-  Widget _buildJobCards() {
-    if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    }
-
-    if (_filteredJobs.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.work_off,
-              size: 64,
-              color: Colors.grey,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _allJobs.isEmpty
-                  ? 'No more jobs available'
-                  : 'No jobs match your filters',
-              style: const TextStyle(
-                fontSize: 18,
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _allJobs.isEmpty
-                  ? 'Check back later for new opportunities'
-                  : 'Try adjusting your filters to see more jobs',
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
-            ),
-            if (_allJobs.isNotEmpty) ...[
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _currentFilter = const JobFilter();
-                    _applyFilter();
-                  });
-                },
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reset Filters'),
-              ),
-            ],
-          ],
-        ),
-      );
-    }
-
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.blue.shade100.withOpacity(0.8),  // Increased opacity and shade
-            Colors.white,
-          ],
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: JobSwiper(
-          controller: _cardController,
-          jobs: _filteredJobs,
-          onSwipeRight: _onSwipeRight,
-          onSwipeLeft: _onSwipeLeft,
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        automaticallyImplyLeading: false,
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Auto Apply Toggle Button
-            Container(
-              child: Material(
-                borderRadius: BorderRadius.circular(32),
-                elevation: 0,
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(32),
-                    color: Colors.grey.shade100,
-                  ),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(32),
-                    onTap: () {
-                      setState(() {
-                        AuthService.setAutoApplyEnabled(!AuthService.isAutoApplyEnabled());
-                      });
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.flash_on,
-                            color: AuthService.isAutoApplyEnabled()
-                                ? Colors.amber.shade600
-                                : Colors.grey.shade400,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Auto',
-                            style: TextStyle(
-                              color: AuthService.isAutoApplyEnabled()
-                                  ? Colors.grey.shade800
-                                  : Colors.grey.shade600,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            
-            // Screen Title
-            const Text(
-              'JobGlide',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-
-            // Filter Button
-            IconButton(
-              icon: const Icon(Icons.filter_list),
-              onPressed: _showFilterDialog,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-          ],
-        ),
+      appBar: JobAppBar(
+        onFilterPressed: _showFilterDialog,
       ),
-      body: _buildJobCards(),
+      body: JobContent(
+        cardController: _cardController,
+        filteredJobs: _filteredJobs,
+        onSwipeRight: _onSwipeRight,
+        onSwipeLeft: _onSwipeLeft,
+        isLoading: _isLoading,
+      ),
     );
   }
 }
