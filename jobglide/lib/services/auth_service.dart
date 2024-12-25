@@ -1,4 +1,4 @@
-import 'package:jobglide/models/model.dart';
+import 'package:jobglide/models/models.dart';
 
 class AuthService {
   static User _mockUser = const User(

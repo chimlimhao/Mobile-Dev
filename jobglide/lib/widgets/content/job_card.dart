@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:jobglide/models/model.dart';
+import 'package:jobglide/models/models.dart';
 import 'package:jobglide/widgets/content/job_chip.dart';
 
 class JobCard extends StatelessWidget {
@@ -16,7 +16,7 @@ class JobCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
-      color: Color(0xFFF0F5F0), // Light mint color
+      color: const Color(0xFFE4D6F5), // Light purple pastel
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
       ),
@@ -74,10 +74,10 @@ class JobCard extends StatelessWidget {
                     textColor: const Color(0xFF1565C0),
                   ),
                   if (job.isRemote)
-                    JobChip(
+                    const JobChip(
                       label: 'Remote',
-                      bgColor: const Color(0xFFE8F5E9),
-                      textColor: const Color(0xFF2E7D32),
+                      bgColor: Color(0xFFE8F5E9),
+                      textColor: Color(0xFF2E7D32),
                     ),
                   JobChip(
                     label: job.profession,

@@ -1,6 +1,6 @@
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
-import '../models/model.dart';
+import '../models/models.dart';
 
 class EmailService {
   // These would typically come from environment variables or secure storage
@@ -24,9 +24,13 @@ class EmailService {
     String? customMessage,
   }) async {
     try {
+      final professionsList = user.preferences.professions;
+      final mainProfession =
+          professionsList.isNotEmpty ? professionsList.first : job.profession;
+
       // Create the email message
       final message = Message()
-        ..from = Address(_username, 'JobGlide App')
+        ..from = const Address(_username, 'JobGlide App')
         ..recipients.add(job.applicationMethod.value)
         ..subject = 'Application for ${job.title} position at ${job.company}'
         ..text = '''
@@ -39,12 +43,12 @@ I am ${user.name} and I found this opportunity through JobGlide. Based on the jo
 I believe my skills and experience make me a strong candidate for this role.
 
 My key qualifications align well with your requirements:
-${user.preferences.professions.map((p) => "- Experience in $p").join("\n")}
+${professionsList.isNotEmpty ? professionsList.map((p) => "- Experience in $p").join("\n") : "- Experience in ${job.profession}"}
 
 ${job.applicationMethod.instructions ?? 'I have attached my resume for your review.'}
 
 I am particularly interested in this role because it offers an opportunity to contribute to ${job.company} 
-while leveraging my experience in ${user.preferences.professions.first}.
+while leveraging my experience in $mainProfession.
 '''}
 
 Best regards,
@@ -65,7 +69,6 @@ ${user.email}
       // Send the email and assume success if no exception is thrown
       await send(message, _smtpServer);
       return true;
-
     } catch (e) {
       print('Error sending email: $e');
       return false;

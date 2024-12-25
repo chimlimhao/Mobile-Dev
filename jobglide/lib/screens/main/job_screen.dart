@@ -1,18 +1,15 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
-import 'package:jobglide/models/model.dart';
+import 'package:jobglide/models/models.dart';
 import 'package:jobglide/services/application_service.dart';
 import 'package:jobglide/services/auth_service.dart';
-import 'package:jobglide/widgets/content/job_filter_dialog.dart';
-import 'package:jobglide/widgets/content/job_swiper.dart';
-import 'package:jobglide/data/dummy_data.dart';
-import 'package:jobglide/widgets/app_bar/job_app_bar.dart';
 import 'package:jobglide/widgets/content/job_content.dart';
 import 'package:jobglide/widgets/navigation/bottom_nav_bar.dart';
+import 'package:jobglide/utils/snackbar_utils.dart';
 import 'applications_screen.dart';
 import 'package:jobglide/screens/main/profile_screen.dart';
 import 'package:jobglide/screens/main/preferences_screen.dart';
+import 'package:jobglide/widgets/app_bar/custom_app_bar.dart';
 
 class JobScreen extends StatefulWidget {
   const JobScreen({super.key});
@@ -35,23 +32,21 @@ class _JobScreenState extends State<JobScreen> {
 
   Future<void> _loadJobs() async {
     final user = AuthService.getCurrentUser();
-    if (user != null) {
-      final savedJobs = await ApplicationService.getSavedJobs();
-      final appliedJobs = await ApplicationService.getAppliedJobs();
-      final rejectedJobs = await ApplicationService.getRejectedJobs();
+    final savedJobs = await ApplicationService.getSavedJobs();
+    final appliedJobs = await ApplicationService.getAppliedJobs();
+    final rejectedJobs = await ApplicationService.getRejectedJobs();
 
-      setState(() {
-        _savedJobs
-          ..clear()
-          ..addAll(savedJobs);
-        _appliedJobs
-          ..clear()
-          ..addAll(appliedJobs);
-        _rejectedJobs
-          ..clear()
-          ..addAll(rejectedJobs);
-      });
-    }
+    setState(() {
+      _savedJobs
+        ..clear()
+        ..addAll(savedJobs);
+      _appliedJobs
+        ..clear()
+        ..addAll(appliedJobs);
+      _rejectedJobs
+        ..clear()
+        ..addAll(rejectedJobs);
+    });
   }
 
   void _updateJobStatus(Job job, JobStatus status) {
@@ -78,11 +73,15 @@ class _JobScreenState extends State<JobScreen> {
     });
   }
 
+  // Add a key to force rebuild of JobListView
+  final _jobListKey = GlobalKey();
+
   Widget _buildBody() {
     return IndexedStack(
       index: _selectedIndex,
       children: [
         JobListView(
+          key: _jobListKey,
           savedJobs: _savedJobs,
           appliedJobs: _appliedJobs,
           rejectedJobs: _rejectedJobs,
@@ -94,7 +93,17 @@ class _JobScreenState extends State<JobScreen> {
           rejectedJobs: _rejectedJobs,
           onJobStatusChanged: _updateJobStatus,
         ),
-        const ProfileScreen(),
+        ProfileScreen(
+          onDataReset: () {
+            setState(() {
+              _savedJobs.clear();
+              _appliedJobs.clear();
+              _rejectedJobs.clear();
+              // Force rebuild of JobListView with a new key
+              _jobListKey.currentState?.setState(() {});
+            });
+          },
+        ),
       ],
     );
   }
@@ -105,7 +114,8 @@ class _JobScreenState extends State<JobScreen> {
       body: _buildBody(),
       bottomNavigationBar: BottomNavBar(
         selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+        onDestinationSelected: (index) =>
+            setState(() => _selectedIndex = index),
       ),
     );
   }
@@ -133,27 +143,8 @@ class _JobListViewState extends State<JobListView> {
   final CardSwiperController _cardController = CardSwiperController();
   List<Job> _allJobs = [];
   List<Job> _filteredJobs = [];
-  JobFilter _currentFilter = const JobFilter();
-  bool _isLoading = true;
+  bool _isLoading = false;
   bool _isProcessing = false;
-
-  void _handleJobApplication(Job job) async {
-    final success = await ApplicationService.applyToJob(job);
-    if (success) {
-      setState(() {
-        _allJobs.remove(job);
-        _filteredJobs.remove(job);
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Application sent successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    }
-  }
 
   @override
   void initState() {
@@ -162,75 +153,167 @@ class _JobListViewState extends State<JobListView> {
   }
 
   @override
-  void dispose() {
-    _cardController.dispose();
-    super.dispose();
+  void didUpdateWidget(JobListView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Check if any of the job lists have changed or if they're empty
+    if (oldWidget.savedJobs.length != widget.savedJobs.length ||
+        oldWidget.appliedJobs.length != widget.appliedJobs.length ||
+        oldWidget.rejectedJobs.length != widget.rejectedJobs.length ||
+        (_allJobs.isEmpty && _filteredJobs.isEmpty)) {
+      _loadJobs();
+    }
   }
 
   Future<void> _loadJobs() async {
+    if (_isLoading) return;
+
     setState(() {
       _isLoading = true;
     });
 
     try {
-      // Get user's saved and applied jobs
-      final savedJobs = widget.savedJobs;
-      final appliedJobs = widget.appliedJobs;
-      final rejectedJobs = widget.rejectedJobs;
+      final availableJobs = await ApplicationService.getAvailableJobs();
+      print('Available jobs: ${availableJobs.length}');
 
-      // Filter out jobs that user has already interacted with
-      final availableJobs = dummyJobs.where((job) {
-        return !savedJobs.any((saved) => saved.id == job.id) &&
-            !appliedJobs.any((applied) => applied.id == job.id) &&
-            !rejectedJobs.any((rejected) => rejected.id == job.id);
+      if (!mounted) return;
+
+      final user = AuthService.getCurrentUser();
+      final preferences = user.preferences;
+
+      List<Job> filteredJobs = List<Job>.from(availableJobs);
+      print(
+          'User preferences: ${preferences.professions}, Remote: ${preferences.remoteOnly}, Types: ${preferences.preferredJobTypes}');
+
+      // First, remove any jobs that are already in saved, applied, or rejected lists
+      filteredJobs = filteredJobs.where((job) {
+        return !widget.savedJobs.any((j) => j.id == job.id) &&
+            !widget.appliedJobs.any((j) => j.id == job.id) &&
+            !widget.rejectedJobs.any((j) => j.id == job.id);
       }).toList();
 
+      print('Jobs after removing interactions: ${filteredJobs.length}');
+
+      // Then apply preference filters
+      if (preferences.professions.isNotEmpty ||
+          preferences.remoteOnly ||
+          preferences.preferredJobTypes.isNotEmpty) {
+        filteredJobs = filteredJobs.where((job) {
+          bool matchesJobType = true;
+          bool matchesRemote = true;
+          bool matchesProfession = true;
+
+          // Helper function to check if a job is software development related
+          bool isSoftwareJob(Job j) {
+            final titleLower = j.title.toLowerCase();
+            final professionLower = j.profession.toLowerCase();
+            final descriptionLower = j.description.toLowerCase();
+
+            final softwareKeywords = [
+              'developer',
+              'engineer',
+              'software',
+              'mobile',
+              'flutter',
+              'full stack',
+              'backend',
+              'frontend'
+            ];
+
+            return softwareKeywords.any((keyword) =>
+                titleLower.contains(keyword) ||
+                professionLower.contains(keyword) ||
+                descriptionLower.contains(keyword));
+          }
+
+          // Check job type - allow both full time and contract for software roles
+          if (preferences.preferredJobTypes.isNotEmpty) {
+            final bool isSoftwareDev = isSoftwareJob(job);
+
+            if (isSoftwareDev) {
+              // For software jobs, be more lenient with job types
+              matchesJobType = preferences.preferredJobTypes.any((type) =>
+                  type == job.jobType ||
+                  (type == JobType.fullTime &&
+                      job.jobType == JobType.contract) ||
+                  (type == JobType.contract &&
+                      job.jobType == JobType.fullTime));
+            } else {
+              // For non-software jobs, strict matching
+              matchesJobType =
+                  preferences.preferredJobTypes.contains(job.jobType);
+            }
+          }
+
+          // Check remote preference - be more lenient for software roles
+          if (preferences.remoteOnly) {
+            matchesRemote = job.isRemote || isSoftwareJob(job);
+          }
+
+          // Check profession with improved matching
+          if (preferences.professions.isNotEmpty) {
+            matchesProfession = preferences.professions.any((p) {
+              final pLower = p.toLowerCase();
+
+              // If looking for software developer, match any software development role
+              if (pLower.contains('software') || pLower.contains('developer')) {
+                return isSoftwareJob(job);
+              }
+
+              // For other professions, do direct matching
+              return job.profession.toLowerCase().contains(pLower) ||
+                  job.title.toLowerCase().contains(pLower);
+            });
+          }
+
+          return matchesJobType && matchesRemote && matchesProfession;
+        }).toList();
+      }
+
+      print('Final filtered jobs: ${filteredJobs.length}');
+
+      if (!mounted) return;
+
       setState(() {
-        _allJobs = availableJobs;
-        _applyFilter();
-      });
-    } catch (e) {
-      print('Error loading jobs: $e');
-      setState(() {
-        _allJobs = dummyJobs;
-        _applyFilter();
-      });
-    } finally {
-      setState(() {
+        _allJobs = List<Job>.from(availableJobs);
+        // Update filtered jobs list, keeping any existing jobs not in the new list
+        final existingJobIds = _filteredJobs.map((j) => j.id).toSet();
+        final newJobs =
+            filteredJobs.where((job) => !existingJobIds.contains(job.id));
+        _filteredJobs.addAll(newJobs);
         _isLoading = false;
       });
+
+      print('Current filtered jobs in state: ${_filteredJobs.length}');
+    } catch (e) {
+      print('Error loading jobs: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  void _applyFilter() {
-    setState(() {
-      _filteredJobs =
-          _allJobs.where((job) => _currentFilter.matches(job)).toList();
-    });
-  }
-
   Future<void> _onSwipeRight(Job job) async {
-    final isAutoApplyEnabled = AuthService.isAutoApplyEnabled();
+    if (_isProcessing) return;
 
+    final isAutoApplyEnabled = AuthService.isAutoApplyEnabled();
     setState(() {
       _isProcessing = true;
     });
 
     try {
+      bool success = false;
       if (isAutoApplyEnabled) {
-        // Apply to the job
-        final success = await ApplicationService.applyToJob(job);
+        success = await ApplicationService.applyToJob(job);
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                success
-                    ? 'Application sent successfully!'
-                    : 'Failed to send application. Please try again.',
-              ),
-              backgroundColor: success ? Colors.green : Colors.red,
-            ),
+          SnackbarUtils.showSnackBar(
+            context,
+            message: success
+                ? 'Application sent successfully!'
+                : 'Failed to send application. Job might already be applied or rejected.',
+            isSuccess: success,
           );
         }
 
@@ -238,70 +321,175 @@ class _JobListViewState extends State<JobListView> {
           widget.onJobStatusChanged(job, JobStatus.applied);
         }
       } else {
-        // Just save the job if auto-apply is disabled
-        await ApplicationService.saveJob(job);
-        widget.onJobStatusChanged(job, JobStatus.saved);
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Job saved! View it in your saved jobs.'),
-              backgroundColor: Colors.green,
-            ),
+        success = await ApplicationService.saveJob(job);
+        if (success) {
+          widget.onJobStatusChanged(job, JobStatus.saved);
+          if (mounted) {
+            SnackbarUtils.showSnackBar(
+              context,
+              message: 'Job saved! View it in your saved jobs.',
+              isSuccess: true,
+            );
+          }
+        } else if (mounted) {
+          SnackbarUtils.showSnackBar(
+            context,
+            message: 'Job already saved or applied.',
+            isSuccess: false,
           );
         }
       }
 
-      // Remove the job from the list regardless of success
-      setState(() {
-        _allJobs.remove(job);
-        _filteredJobs.remove(job);
-      });
+      if (success && mounted) {
+        // Load more jobs first
+        await _loadJobs();
+
+        // Then remove the swiped job
+        if (mounted) {
+          setState(() {
+            _filteredJobs.removeWhere((j) => j.id == job.id);
+          });
+        }
+      }
     } catch (e) {
       print('Error handling swipe right: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Something went wrong. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
+        SnackbarUtils.showSnackBar(
+          context,
+          message: 'Something went wrong. Please try again.',
+          isSuccess: false,
         );
       }
     } finally {
-      setState(() {
-        _isProcessing = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
     }
   }
 
-  void _onSwipeLeft(Job job) {
+  void _onSwipeLeft(Job job) async {
+    if (_isProcessing) return;
+
     setState(() {
-      _allJobs.remove(job);
-      _filteredJobs.remove(job);
-      widget.onJobStatusChanged(job, JobStatus.rejected);
+      _isProcessing = true;
     });
+
+    try {
+      // Load more jobs first
+      await _loadJobs();
+
+      // Then store the job as rejected and update UI
+      await ApplicationService.rejectJob(job);
+
+      if (mounted) {
+        setState(() {
+          _filteredJobs.removeWhere((j) => j.id == job.id);
+          widget.onJobStatusChanged(job, JobStatus.rejected);
+        });
+      }
+    } catch (e) {
+      print('Error handling swipe left: $e');
+      if (mounted) {
+        SnackbarUtils.showSnackBar(
+          context,
+          message: 'Something went wrong. Please try again.',
+          isSuccess: false,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
+    }
   }
 
-  Future<void> _showFilterDialog() async {
-    final result = await showDialog<JobFilter>(
-      context: context,
-      builder: (context) => JobFilterDialog(
-        initialFilter: _currentFilter,
-        onApply: (filter) {
-          setState(() {
-            _currentFilter = filter;
-            _applyFilter();
-          });
-        },
-      ),
-    );
+  void _applyUserPreferences() async {
+    setState(() {
+      _isLoading = true;
+    });
 
-    if (result != null) {
-      setState(() {
-        _currentFilter = result;
-        _applyFilter();
-      });
+    try {
+      // Get current user preferences
+      final user = AuthService.getCurrentUser();
+      final preferences = user.preferences;
+
+      // If no preferences are set, show all jobs
+      if (preferences.professions.isEmpty &&
+          !preferences.remoteOnly &&
+          preferences.preferredJobTypes.isEmpty) {
+        setState(() {
+          _filteredJobs = List<Job>.from(_allJobs);
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Apply filters based on preferences
+      final filteredJobs = _allJobs.where((job) {
+        // Check job type
+        if (preferences.preferredJobTypes.isNotEmpty) {
+          if (!preferences.preferredJobTypes.contains(job.jobType)) {
+            return false;
+          }
+        }
+
+        // Check remote preference
+        if (preferences.remoteOnly && !job.isRemote) {
+          return false;
+        }
+
+        // Check profession
+        if (preferences.professions.isNotEmpty) {
+          bool matchesAnyProfession = preferences.professions.any((p) {
+            final pLower = p.toLowerCase();
+            return job.profession.toLowerCase() == pLower ||
+                job.title.toLowerCase().contains(pLower) ||
+                job.description.toLowerCase().contains(pLower);
+          });
+          if (!matchesAnyProfession) {
+            return false;
+          }
+        }
+
+        return true;
+      }).toList();
+
+      // Remove any jobs that are already in saved, applied, or rejected lists
+      final availableJobs = filteredJobs.where((job) {
+        return !widget.savedJobs.any((j) => j.id == job.id) &&
+            !widget.appliedJobs.any((j) => j.id == job.id) &&
+            !widget.rejectedJobs.any((j) => j.id == job.id);
+      }).toList();
+
+      if (mounted) {
+        setState(() {
+          _filteredJobs = availableJobs;
+          _isLoading = false;
+        });
+
+        // If we have too few jobs after filtering, load more
+        if (_filteredJobs.length <= 2) {
+          _loadJobs();
+        }
+      }
+    } catch (e) {
+      print('Error applying preferences: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    _cardController.dispose();
+    super.dispose();
   }
 
   @override
@@ -313,20 +501,9 @@ class _JobListViewState extends State<JobListView> {
             context,
             MaterialPageRoute(builder: (context) => const PreferencesScreen()),
           );
-          // After returning from preferences screen, update the jobs list
+          // After returning from preferences screen, apply the new preferences
           if (mounted) {
-            final user = AuthService.getCurrentUser();
-            if (user != null) {
-              setState(() {
-                // Update filter based on user preferences
-                _currentFilter = JobFilter(
-                  jobTypes: user.preferences.preferredJobTypes,
-                  remoteOnly: user.preferences.remoteOnly,
-                  professions: user.preferences.professions,
-                );
-                _loadJobs();
-              });
-            }
+            _applyUserPreferences();
           }
         },
       ),

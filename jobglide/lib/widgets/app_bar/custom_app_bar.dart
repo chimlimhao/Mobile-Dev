@@ -4,12 +4,14 @@ import 'package:jobglide/services/auth_service.dart';
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final List<Widget>? actions;
+  final Widget? leading;
   final bool centerTitle;
   final Color? backgroundColor;
 
   const CustomAppBar({
     super.key,
     this.title = 'JobGlide',
+    this.leading,
     this.actions,
     this.centerTitle = true,
     this.backgroundColor,
@@ -18,19 +20,36 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return AppBar(
       backgroundColor: backgroundColor ?? Colors.white,
       surfaceTintColor: Colors.white,
-      centerTitle: centerTitle,
-      title: Text(
-        title,
-        style: theme.textTheme.titleLarge?.copyWith(
-          color: theme.colorScheme.primary,
-          fontWeight: FontWeight.w600,
-        ),
+      automaticallyImplyLeading: false,
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Leading section
+          leading ?? const SizedBox(width: 48),
+
+          // Title section
+          Text(
+            title,
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+
+          // Actions section
+          if (actions != null)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: actions!,
+            )
+          else
+            const SizedBox(width: 48), // Balance the layout when no actions
+        ],
       ),
-      actions: actions,
     );
   }
 
@@ -50,7 +69,7 @@ class FilterButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      icon: const Icon(Icons.filter_list),
+      icon: const Icon(Icons.tune),
       onPressed: onPressed,
       tooltip: 'Filter jobs',
     );
@@ -69,10 +88,10 @@ class JobAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return CustomAppBar(
       backgroundColor: Colors.transparent,
-      centerTitle: true,
+      leading: const AutoApplyButton(),
+      title: 'JobGlide',
       actions: [
         FilterButton(onPressed: onFilterPressed),
-        const AutoApplyButton(),
       ],
     );
   }
@@ -91,49 +110,65 @@ class AutoApplyButton extends StatefulWidget {
 class _AutoApplyButtonState extends State<AutoApplyButton> {
   @override
   Widget build(BuildContext context) {
-    return Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(32),
-          color: Colors.grey.shade100,
-        ),
+    final isEnabled = AuthService.isAutoApplyEnabled();
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 65),
+      child: Container(
+        margin: const EdgeInsets.only(left: 8),
         child: Material(
-          color: Colors.transparent,
+          color: isEnabled ? const Color(0xFFFFF3E0) : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(20),
           child: InkWell(
-            borderRadius: BorderRadius.circular(32),
+            borderRadius: BorderRadius.circular(20),
             onTap: () {
               setState(() {
-                AuthService.setAutoApplyEnabled(
-                    !AuthService.isAutoApplyEnabled());
+                AuthService.setAutoApplyEnabled(!isEnabled);
               });
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    isEnabled
+                        ? 'Auto-apply disabled. You\'ll need to save jobs first.'
+                        : 'Auto-apply enabled. Swipe right to instantly apply!',
+                  ),
+                  duration: const Duration(seconds: 2),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
             },
             child: Padding(
-              padding: const EdgeInsets.all(4),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
                     Icons.flash_on,
-                    color: AuthService.isAutoApplyEnabled()
+                    color: isEnabled
                         ? Colors.amber.shade600
                         : Colors.grey.shade400,
-                    size: 20,
+                    size: 14,
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 2),
                   Text(
                     'Auto',
                     style: TextStyle(
-                      color: AuthService.isAutoApplyEnabled()
-                          ? Colors.grey.shade800
+                      color: isEnabled
+                          ? Colors.amber.shade800
                           : Colors.grey.shade600,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
             ),
           ),
-        ));
+        ),
+      ),
+    );
   }
 }
 

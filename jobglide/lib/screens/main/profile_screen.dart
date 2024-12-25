@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:jobglide/services/auth_service.dart';
-import 'package:jobglide/models/model.dart';
+import 'package:jobglide/models/models.dart';
+import 'package:jobglide/services/application_service.dart';
+import 'package:jobglide/utils/snackbar_utils.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final VoidCallback? onDataReset;
+
+  const ProfileScreen({
+    super.key,
+    this.onDataReset,
+  });
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -16,7 +23,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _user = AuthService.getCurrentUser()!;
+    _user = AuthService.getCurrentUser();
   }
 
   @override
@@ -25,19 +32,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: _isEditing 
-        ? AppBar(
-            title: const Text('Edit Profile'),
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () {
-                setState(() {
-                  _isEditing = false;
-                });
-              },
-            ),
-          )
-        : null,
+      appBar: _isEditing
+          ? AppBar(
+              title: const Text('Edit Profile'),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  setState(() {
+                    _isEditing = false;
+                  });
+                },
+              ),
+            )
+          : null,
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -181,6 +188,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       // Handle refer friends tap
                     },
                   ),
+                  _buildListTile(
+                    context,
+                    icon: Icons.refresh,
+                    title: 'Reset Job Data',
+                    onTap: () => _showResetConfirmation(context),
+                  ),
                 ],
               ),
             ),
@@ -247,13 +260,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       title: Text(
         title,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w500,
-        ),
+              fontWeight: FontWeight.w500,
+            ),
       ),
-      trailing: trailing ?? Icon(
-        Icons.chevron_right,
-        color: Colors.grey[400],
-      ),
+      trailing: trailing ??
+          Icon(
+            Icons.chevron_right,
+            color: Colors.grey[400],
+          ),
       onTap: onTap,
     );
   }
@@ -303,6 +317,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _showResetConfirmation(BuildContext context) async {
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Reset Job Data'),
+          content: const Text(
+              'This will clear all your saved, applied, and rejected jobs. You\'ll be able to start fresh with job swiping. Are you sure?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text(
+                'Reset',
+                style: TextStyle(color: Colors.red),
+              ),
+              onPressed: () async {
+                await ApplicationService.clearAllJobData();
+                if (mounted) {
+                  Navigator.of(context).pop();
+                  widget.onDataReset?.call();
+                  SnackbarUtils.showSnackBar(
+                    context,
+                    message: 'All job data has been reset!',
+                    isSuccess: true,
+                  );
+                }
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 }

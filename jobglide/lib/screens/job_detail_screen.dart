@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:jobglide/models/model.dart';
-import 'package:jobglide/services/application_service.dart';
+import 'package:jobglide/models/models.dart';
 
 class JobDetailScreen extends StatefulWidget {
   final Job job;
@@ -53,16 +52,18 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 color: colorScheme.surface,
                 border: Border(
                   bottom: BorderSide(
-                    color: colorScheme.surfaceVariant,
+                    color: colorScheme.surfaceContainerHighest,
                   ),
                 ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (!widget.isSaved) // Show application status for applied jobs
+                  if (!widget
+                      .isSaved) // Show application status for applied jobs
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       margin: const EdgeInsets.only(bottom: 16),
                       decoration: BoxDecoration(
                         color: colorScheme.primaryContainer,
@@ -71,10 +72,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.check_circle, 
-                            size: 16, 
-                            color: colorScheme.primary
-                          ),
+                          Icon(Icons.check_circle,
+                              size: 16, color: colorScheme.primary),
                           const SizedBox(width: 4),
                           Text(
                             'Applied',
@@ -96,14 +95,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.business, size: 16, color: colorScheme.primary),
+                      Icon(Icons.business,
+                          size: 16, color: colorScheme.primary),
                       const SizedBox(width: 4),
                       Text(
                         widget.job.company,
                         style: TextStyle(color: colorScheme.primary),
                       ),
                       const SizedBox(width: 16),
-                      Icon(Icons.location_on, size: 16, color: colorScheme.primary),
+                      Icon(Icons.location_on,
+                          size: 16, color: colorScheme.primary),
                       const SizedBox(width: 4),
                       Text(
                         widget.job.location,
@@ -145,7 +146,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   _buildSection(
                     context,
                     title: 'About the Company',
-                    content: 'Visit ${widget.job.companyWebsite ?? "company website"} to learn more about ${widget.job.company} and their mission.',
+                    content:
+                        'Visit ${widget.job.companyWebsite ?? "company website"} to learn more about ${widget.job.company} and their mission.',
                   ),
                 ],
               ),
@@ -153,89 +155,96 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: widget.isSaved ? Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-          border: Border(
-            top: BorderSide(color: colorScheme.surfaceVariant),
-          ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: ElevatedButton(
-                onPressed: _isApplying ? null : () async {
-                  setState(() {
-                    _isApplying = true;
-                  });
-
-                  try {
-                    await widget.onApply(widget.job);
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Application sent successfully!'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                      Navigator.pop(context);
-                    }
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Failed to send application. Please try again.'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    }
-                  } finally {
-                    if (mounted) {
-                      setState(() {
-                        _isApplying = false;
-                      });
-                    }
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: colorScheme.onPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ).copyWith(
-                  elevation: MaterialStateProperty.resolveWith<double>(
-                    (Set<MaterialState> states) {
-                      if (states.contains(MaterialState.disabled)) {
-                        return 0;
-                      }
-                      return 4;
-                    },
-                  ),
+      bottomNavigationBar: widget.isSaved
+          ? Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                border: Border(
+                  top: BorderSide(color: colorScheme.surfaceContainerHighest),
                 ),
-                child: _isApplying
-                    ? SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(colorScheme.onPrimary),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _isApplying
+                          ? null
+                          : () async {
+                              setState(() {
+                                _isApplying = true;
+                              });
+
+                              try {
+                                await widget.onApply(widget.job);
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                          'Application sent successfully!'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                  Navigator.pop(context);
+                                }
+                              } catch (e) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                          'Failed to send application. Please try again.'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              } finally {
+                                if (mounted) {
+                                  setState(() {
+                                    _isApplying = false;
+                                  });
+                                }
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: colorScheme.onPrimary,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                      )
-                    : const Text(
-                        'Apply Now',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                      ).copyWith(
+                        elevation: WidgetStateProperty.resolveWith<double>(
+                          (Set<WidgetState> states) {
+                            if (states.contains(WidgetState.disabled)) {
+                              return 0;
+                            }
+                            return 4;
+                          },
                         ),
                       ),
+                      child: _isApplying
+                          ? SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    colorScheme.onPrimary),
+                              ),
+                            )
+                          : const Text(
+                              'Apply Now',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
-      ) : null, // Don't show apply button for applied jobs
+            )
+          : null, // Don't show apply button for applied jobs
     );
   }
 
@@ -265,7 +274,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

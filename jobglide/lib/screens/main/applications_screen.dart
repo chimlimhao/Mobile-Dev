@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:jobglide/models/model.dart';
+import 'package:jobglide/models/models.dart';
 import 'package:jobglide/screens/job_detail_screen.dart';
 import 'package:jobglide/services/application_service.dart';
 
@@ -21,7 +21,8 @@ class ApplicationsScreen extends StatefulWidget {
   State<ApplicationsScreen> createState() => _ApplicationsScreenState();
 }
 
-class _ApplicationsScreenState extends State<ApplicationsScreen> with SingleTickerProviderStateMixin {
+class _ApplicationsScreenState extends State<ApplicationsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -139,10 +140,10 @@ class _ApplicationsScreenState extends State<ApplicationsScreen> with SingleTick
               job,
               isSaved ? JobStatus.saved : JobStatus.applied,
             );
-            
+
             // Update parent state
             widget.onJobStatusChanged(job, JobStatus.rejected);
-            
+
             // Show snackbar with undo option
             if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
@@ -155,14 +156,14 @@ class _ApplicationsScreenState extends State<ApplicationsScreen> with SingleTick
                     setState(() {
                       jobsList.insert(jobIndex, job);
                     });
-                    
+
                     // Re-save to storage
                     if (isSaved) {
                       await ApplicationService.saveJob(job);
                     } else {
                       await ApplicationService.applyToJob(job);
                     }
-                    
+
                     // Update parent state
                     widget.onJobStatusChanged(
                       job,

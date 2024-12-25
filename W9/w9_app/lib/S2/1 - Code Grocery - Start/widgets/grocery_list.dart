@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:w9_app/S2/main.dart';
 import '../data/dummy_items.dart';
 import '../models/grocery_item.dart';
 // import '../models/grocery_category.dart';

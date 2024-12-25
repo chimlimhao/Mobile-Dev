@@ -2,7 +2,7 @@ import '../models/grocery_category.dart';
 import '../models/grocery_item.dart';
 import 'package:uuid/uuid.dart';
 
-final uuid = const Uuid();
+const uuid = Uuid();
 
 final dummyGroceryItems = [
   GroceryItem(

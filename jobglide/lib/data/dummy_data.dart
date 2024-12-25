@@ -1,4 +1,4 @@
-import '../models/model.dart';
+import '../models/models.dart';
 
 final List<Job> dummyJobs = [
   // Mobile Development Jobs
@@ -18,7 +18,7 @@ final List<Job> dummyJobs = [
     jobType: JobType.fullTime,
     isRemote: true,
     profession: 'Mobile Developer',
-    applicationMethod: ApplicationMethod(
+    applicationMethod: const ApplicationMethod(
       type: 'email',
       value: 'careers@techcorp.com',
       instructions:
@@ -44,7 +44,7 @@ final List<Job> dummyJobs = [
     jobType: JobType.fullTime,
     isRemote: false,
     profession: 'Mobile Developer',
-    applicationMethod: ApplicationMethod(
+    applicationMethod: const ApplicationMethod(
       type: 'email',
       value: 'jobs@startupinc.com',
       instructions:
@@ -70,7 +70,7 @@ final List<Job> dummyJobs = [
     jobType: JobType.internship,
     isRemote: true,
     profession: 'Mobile Developer',
-    applicationMethod: ApplicationMethod(
+    applicationMethod: const ApplicationMethod(
       type: 'email',
       value: 'internships@mobilefirst.com',
       instructions:
@@ -98,7 +98,7 @@ final List<Job> dummyJobs = [
     jobType: JobType.fullTime,
     isRemote: true,
     profession: 'Design',
-    applicationMethod: ApplicationMethod(
+    applicationMethod: const ApplicationMethod(
       type: 'email',
       value: 'design@creativesolutions.com',
       instructions: 'Share your portfolio and design process examples.',
@@ -123,7 +123,7 @@ final List<Job> dummyJobs = [
     jobType: JobType.fullTime,
     isRemote: false,
     profession: 'Design',
-    applicationMethod: ApplicationMethod(
+    applicationMethod: const ApplicationMethod(
       type: 'email',
       value: 'careers@designworks.com',
       instructions: 'Submit your portfolio and case studies.',
@@ -150,7 +150,7 @@ final List<Job> dummyJobs = [
     jobType: JobType.fullTime,
     isRemote: true,
     profession: 'Engineering',
-    applicationMethod: ApplicationMethod(
+    applicationMethod: const ApplicationMethod(
       type: 'email',
       value: 'devops@cloudtech.com',
       instructions:
@@ -175,7 +175,7 @@ final List<Job> dummyJobs = [
     jobType: JobType.fullTime,
     isRemote: false,
     profession: 'Engineering',
-    applicationMethod: ApplicationMethod(
+    applicationMethod: const ApplicationMethod(
       type: 'email',
       value: 'engineering@techstack.com',
       instructions: 'Share your GitHub profile and significant projects.',
@@ -201,7 +201,7 @@ final List<Job> dummyJobs = [
     jobType: JobType.fullTime,
     isRemote: true,
     profession: 'Data Science',
-    applicationMethod: ApplicationMethod(
+    applicationMethod: const ApplicationMethod(
       type: 'email',
       value: 'careers@datacorp.com',
       instructions: 'Include your research papers and project portfolio.',
@@ -225,7 +225,7 @@ final List<Job> dummyJobs = [
     jobType: JobType.fullTime,
     isRemote: true,
     profession: 'Data Science',
-    applicationMethod: ApplicationMethod(
+    applicationMethod: const ApplicationMethod(
       type: 'email',
       value: 'ml@aisolutions.com',
       instructions: 'Share your ML project portfolio and GitHub profile.',
@@ -252,7 +252,7 @@ final List<Job> dummyJobs = [
     jobType: JobType.fullTime,
     isRemote: true,
     profession: 'Software Developer',
-    applicationMethod: ApplicationMethod(
+    applicationMethod: const ApplicationMethod(
       type: 'email',
       value: 'careers@techsolutions.com',
       instructions:
@@ -278,11 +278,10 @@ final List<Job> dummyJobs = [
     jobType: JobType.fullTime,
     isRemote: true,
     profession: 'Software Developer',
-    applicationMethod: ApplicationMethod(
+    applicationMethod: const ApplicationMethod(
       type: 'email',
       value: 'jobs@innovatecorp.com',
-      instructions:
-          'Send your resume and portfolio of recent projects.',
+      instructions: 'Send your resume and portfolio of recent projects.',
     ),
     postedDate: DateTime(2024, 12, 23),
     salary: '\$100,000 - \$150,000',

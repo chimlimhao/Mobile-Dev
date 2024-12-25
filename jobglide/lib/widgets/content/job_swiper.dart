@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
-import 'package:jobglide/models/model.dart';
+import 'package:jobglide/models/models.dart';
 import 'package:jobglide/widgets/content/job_card.dart';
 
 class JobSwiper extends StatefulWidget {
@@ -27,11 +27,12 @@ class _JobSwiperState extends State<JobSwiper> {
   @override
   void didUpdateWidget(JobSwiper oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.jobs.isEmpty) {
+    // Only show empty state if we have no jobs and the old widget had jobs
+    if (widget.jobs.isEmpty && oldWidget.jobs.isNotEmpty) {
       setState(() {
         _showEmptyState = true;
       });
-    } else {
+    } else if (widget.jobs.isNotEmpty) {
       setState(() {
         _showEmptyState = false;
       });
@@ -52,15 +53,15 @@ class _JobSwiperState extends State<JobSwiper> {
           Text(
             'No jobs available',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Colors.grey[600],
-            ),
+                  color: Colors.grey[600],
+                ),
           ),
           const SizedBox(height: 8),
           Text(
             'Check back later for new opportunities',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[500],
-            ),
+                  color: Colors.grey[500],
+                ),
           ),
         ],
       ),
@@ -69,54 +70,59 @@ class _JobSwiperState extends State<JobSwiper> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.jobs.isEmpty || _showEmptyState) {
+    // Only show empty state if explicitly set and we have no jobs
+    if (_showEmptyState && widget.jobs.isEmpty) {
       return _buildEmptyState();
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SizedBox(
-          height: 800,
-          child: CardSwiper(
-            controller: widget.controller,
-            cardsCount: widget.jobs.length,
-            numberOfCardsDisplayed: 1,
-            scale: 0.95,
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            onSwipe: (previousIndex, currentIndex, direction) {
-              if (previousIndex >= widget.jobs.length) return true;
-              
-              if (direction == CardSwiperDirection.right) {
-                widget.onSwipeRight(widget.jobs[previousIndex]);
-              } else if (direction == CardSwiperDirection.left) {
-                widget.onSwipeLeft(widget.jobs[previousIndex]);
-              }
+    // If we have jobs, always try to show them
+    if (widget.jobs.isNotEmpty) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: SizedBox(
+              height: 800,
+              child: CardSwiper(
+                controller: widget.controller,
+                cardsCount: widget.jobs.length,
+                numberOfCardsDisplayed: widget.jobs.length > 1 ? 2 : 1,
+                backCardOffset: widget.jobs.length > 1
+                    ? const Offset(0, 40)
+                    : const Offset(0, 0),
+                scale: 0.95,
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                onSwipe: (previousIndex, currentIndex, direction) {
+                  if (previousIndex >= widget.jobs.length) return true;
 
-              // Check if we've reached the end of the cards
-              if (currentIndex == null || currentIndex >= widget.jobs.length) {
-                // Show empty state after a short delay to allow animation to complete
-                Future.delayed(const Duration(milliseconds: 300), () {
-                  if (mounted) {
-                    setState(() {
-                      _showEmptyState = true;
-                    });
+                  if (direction == CardSwiperDirection.right) {
+                    widget.onSwipeRight(widget.jobs[previousIndex]);
+                  } else if (direction == CardSwiperDirection.left) {
+                    widget.onSwipeLeft(widget.jobs[previousIndex]);
                   }
-                });
-              }
-              return true;
-            },
-            cardBuilder: (context, index, _, __) {
-              if (index >= widget.jobs.length) {
-                return const SizedBox.shrink();
-              }
-              return JobCard(
-                job: widget.jobs[index],
-                index: index,
-              );
-            },
-          ),
-        );
-      },
+                  return true;
+                },
+                cardBuilder:
+                    (context, index, horizontalThreshold, verticalThreshold) {
+                  if (index >= widget.jobs.length) {
+                    return const SizedBox.shrink();
+                  }
+                  return JobCard(
+                    job: widget.jobs[index],
+                    index: index,
+                  );
+                },
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+    // If we're here, we have no jobs but haven't confirmed we're empty
+    // Show a loading-like state instead of empty state
+    return const Center(
+      child: CircularProgressIndicator(),
     );
   }
 }

@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/model.dart';
+import '../models/models.dart';
 import 'auth_service.dart';
 import 'email_service.dart';
+import '../data/dummy_data.dart';
 
 class ApplicationService {
   static const String _savedJobsKey = 'saved_jobs';
@@ -15,8 +16,17 @@ class ApplicationService {
   }
 
   static Future<bool> applyToJob(Job job) async {
+    // First check if job is already saved or applied
+    final savedJobs = await getSavedJobs();
+    final appliedJobs = await getAppliedJobs();
+    final rejectedJobs = await getRejectedJobs();
+
+    if (appliedJobs.any((j) => j.id == job.id) ||
+        rejectedJobs.any((j) => j.id == job.id)) {
+      return false; // Job already applied or rejected
+    }
+
     final user = AuthService.getCurrentUser();
-    if (user == null) return false;
 
     // Send the application email
     final emailSent = await EmailService.sendJobApplication(
@@ -25,14 +35,30 @@ class ApplicationService {
     );
 
     if (emailSent) {
+      // Remove from saved if it was there
+      if (savedJobs.any((j) => j.id == job.id)) {
+        await deleteJob(job, JobStatus.saved);
+      }
       await _saveJobToList(job, _appliedJobsKey, JobStatus.applied);
       return true;
     }
     return false;
   }
 
-  static Future<void> saveJob(Job job) async {
+  static Future<bool> saveJob(Job job) async {
+    // First check if job is already saved or applied
+    final savedJobs = await getSavedJobs();
+    final appliedJobs = await getAppliedJobs();
+    final rejectedJobs = await getRejectedJobs();
+
+    if (savedJobs.any((j) => j.id == job.id) ||
+        appliedJobs.any((j) => j.id == job.id) ||
+        rejectedJobs.any((j) => j.id == job.id)) {
+      return false; // Job already exists in one of the lists
+    }
+
     await _saveJobToList(job, _savedJobsKey, JobStatus.saved);
+    return true;
   }
 
   static Future<void> rejectJob(Job job) async {
@@ -40,23 +66,20 @@ class ApplicationService {
   }
 
   static Future<void> deleteJob(Job job, JobStatus status) async {
-    if (_prefs == null) {
-      _prefs = await SharedPreferences.getInstance();
-    }
+    _prefs ??= await SharedPreferences.getInstance();
 
     final user = AuthService.getCurrentUser();
-    if (user == null) return;
 
     final key = status == JobStatus.saved ? _savedJobsKey : _appliedJobsKey;
     final userKey = '${key}_${user.id}';
-    
+
     // Get existing jobs
     final jobsJson = _prefs!.getString(userKey) ?? '[]';
     final List<dynamic> jobs = json.decode(jobsJson);
-    
+
     // Remove the job with matching id
     final updatedJobs = jobs.where((j) => j['id'] != job.id).toList();
-    
+
     // Save back to preferences
     await _prefs!.setString(userKey, json.encode(updatedJobs));
 
@@ -68,21 +91,19 @@ class ApplicationService {
     }
   }
 
-  static Future<void> _saveJobToList(Job job, String key, JobStatus status) async {
-    if (_prefs == null) {
-      _prefs = await SharedPreferences.getInstance();
-    }
+  static Future<void> _saveJobToList(
+      Job job, String key, JobStatus status) async {
+    _prefs ??= await SharedPreferences.getInstance();
 
     final user = AuthService.getCurrentUser();
-    if (user == null) return;
 
     final userKey = '${key}_${user.id}';
-    
+
     // Get existing jobs from all lists to check for duplicates
     final savedJobs = await getSavedJobs();
     final appliedJobs = await getAppliedJobs();
     final rejectedJobs = await getRejectedJobs();
-    
+
     // Remove job from other lists if it exists
     if (key != _savedJobsKey && savedJobs.any((j) => j.id == job.id)) {
       await deleteJob(job, JobStatus.saved);
@@ -95,14 +116,15 @@ class ApplicationService {
       final rejectedKey = '${_rejectedJobsKey}_${user.id}';
       final rejectedJobsJson = _prefs!.getString(rejectedKey) ?? '[]';
       final List<dynamic> rejectedJobsList = json.decode(rejectedJobsJson);
-      final updatedRejectedJobs = rejectedJobsList.where((j) => j['id'] != job.id).toList();
+      final updatedRejectedJobs =
+          rejectedJobsList.where((j) => j['id'] != job.id).toList();
       await _prefs!.setString(rejectedKey, json.encode(updatedRejectedJobs));
     }
 
     // Get current list jobs
     final jobsJson = _prefs!.getString(userKey) ?? '[]';
     final List<dynamic> jobs = json.decode(jobsJson);
-    
+
     // Add new job if not already in this list
     if (!jobs.any((j) => j['id'] == job.id)) {
       final jobJson = {
@@ -124,12 +146,12 @@ class ApplicationService {
   static Future<void> restoreJob(Job job) async {
     // First remove from rejected list
     final user = AuthService.getCurrentUser();
-    if (user == null) return;
 
     final rejectedKey = '${_rejectedJobsKey}_${user.id}';
     final rejectedJobsJson = _prefs!.getString(rejectedKey) ?? '[]';
     final List<dynamic> rejectedJobs = json.decode(rejectedJobsJson);
-    final updatedRejectedJobs = rejectedJobs.where((j) => j['id'] != job.id).toList();
+    final updatedRejectedJobs =
+        rejectedJobs.where((j) => j['id'] != job.id).toList();
     await _prefs!.setString(rejectedKey, json.encode(updatedRejectedJobs));
 
     // Then add to saved list
@@ -149,17 +171,14 @@ class ApplicationService {
   }
 
   static Future<List<Job>> _getJobsFromList(String key) async {
-    if (_prefs == null) {
-      _prefs = await SharedPreferences.getInstance();
-    }
+    _prefs ??= await SharedPreferences.getInstance();
 
     final user = AuthService.getCurrentUser();
-    if (user == null) return [];
 
     final userKey = '${key}_${user.id}';
     final jobsJson = _prefs!.getString(userKey) ?? '[]';
     final List<dynamic> jobs = json.decode(jobsJson);
-    
+
     return jobs.map((jobJson) {
       // Ensure all required fields have default values
       final Map<String, dynamic> safeJson = {
@@ -174,15 +193,46 @@ class ApplicationService {
         'profession': jobJson['profession'] ?? 'Unknown',
         'salary': jobJson['salary'] ?? 'Competitive',
         'postedDate': jobJson['postedDate'] ?? DateTime.now().toIso8601String(),
-        'applicationMethod': jobJson['applicationMethod'] ?? {
-          'type': 'email',
-          'value': 'unknown@example.com',
-        },
+        'applicationMethod': jobJson['applicationMethod'] ??
+            {
+              'type': 'email',
+              'value': 'unknown@example.com',
+            },
         'companyWebsite': jobJson['companyWebsite'],
         'status': jobJson['status'],
         'timestamp': jobJson['timestamp'],
       };
       return Job.fromJson(safeJson);
     }).toList();
+  }
+
+  static Future<List<Job>> getAvailableJobs() async {
+    final savedJobs = await getSavedJobs();
+    final appliedJobs = await getAppliedJobs();
+    final rejectedJobs = await getRejectedJobs();
+
+    final Set<String> interactedJobIds = {
+      ...savedJobs.map((job) => job.id),
+      ...appliedJobs.map((job) => job.id),
+      ...rejectedJobs.map((job) => job.id),
+    };
+
+    return dummyJobs
+        .where((job) => !interactedJobIds.contains(job.id))
+        .toList();
+  }
+
+  static Future<void> clearAllJobData() async {
+    _prefs ??= await SharedPreferences.getInstance();
+    final user = AuthService.getCurrentUser();
+
+    // Clear saved jobs
+    await _prefs!.remove('${_savedJobsKey}_${user.id}');
+
+    // Clear applied jobs
+    await _prefs!.remove('${_appliedJobsKey}_${user.id}');
+
+    // Clear rejected jobs
+    await _prefs!.remove('${_rejectedJobsKey}_${user.id}');
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
-import 'package:jobglide/models/model.dart';
+import 'package:jobglide/models/models.dart';
 import 'package:jobglide/widgets/content/job_swiper.dart';
 
 class JobContent extends StatelessWidget {
