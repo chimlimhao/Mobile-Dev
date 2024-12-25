@@ -1,0 +1,22 @@
+# Large files
+*.zip
+*.rar
+*.7z
+
+# Flutter/Dart specific
+**/build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+
+# IDE specific
+.idea/
+.vscode/
+*.iml
+
+# Others
+.DS_Store
+*.log
