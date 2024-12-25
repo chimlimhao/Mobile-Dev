@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jobglide/models/model.dart';
-import 'package:jobglide/widgets/job_chip.dart';
+import 'package:jobglide/widgets/content/job_chip.dart';
 
 class JobCard extends StatelessWidget {
   final Job job;
@@ -16,7 +16,7 @@ class JobCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
-      color: Color(0xFFF0F5F0),  // Light mint color
+      color: Color(0xFFF0F5F0), // Light mint color
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
       ),
@@ -69,25 +69,25 @@ class JobCard extends StatelessWidget {
                 runSpacing: 12,
                 children: [
                   JobChip(
-                    label: job.isRemote ? 'Remote' : 'On-site',
-                    bgColor: const Color(0xFFE3F2FD),
-                    textColor: Colors.blue.shade700,
-                  ),
-                  JobChip(
                     label: job.jobType.toDisplayString(),
-                    bgColor: const Color(0xFFE8F5E9),
-                    textColor: Colors.green.shade700,
+                    bgColor: const Color(0xFFE3F2FD),
+                    textColor: const Color(0xFF1565C0),
                   ),
+                  if (job.isRemote)
+                    JobChip(
+                      label: 'Remote',
+                      bgColor: const Color(0xFFE8F5E9),
+                      textColor: const Color(0xFF2E7D32),
+                    ),
                   JobChip(
                     label: job.profession,
                     bgColor: const Color(0xFFF3E5F5),
-                    textColor: Colors.purple.shade700,
+                    textColor: const Color(0xFF6A1B9A),
                   ),
                   JobChip(
                     label: job.salary,
                     bgColor: const Color(0xFFFFF8E1),
-                    textColor: Colors.amber.shade800,
-                    isWide: true,
+                    textColor: const Color(0xFFF9A825),
                   ),
                 ],
               ),

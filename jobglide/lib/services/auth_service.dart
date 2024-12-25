@@ -1,13 +1,13 @@
 import 'package:jobglide/models/model.dart';
 
 class AuthService {
-  static User _mockUser = User(
-    id: 'mock_user_1',
-    email: 'user@example.com',
-    name: 'John Doe',
+  static User _mockUser = const User(
+    id: '1',
+    email: 'limhao@gmail.com',
+    name: 'Chim Limhao',
     autoApplyEnabled: false,
-    preferences: const UserPreferences(
-      profession: 'Software Developer',
+    preferences: UserPreferences(
+      professions: ['Software Developer'],
       remoteOnly: true,
       preferredJobTypes: [JobType.fullTime, JobType.contract],
     ),

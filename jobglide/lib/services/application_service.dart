@@ -1,136 +1,188 @@
-import 'package:flutter/material.dart';
-import 'package:jobglide/models/model.dart';
-import 'package:jobglide/services/auth_service.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../models/model.dart';
+import 'auth_service.dart';
+import 'email_service.dart';
 
 class ApplicationService {
+  static const String _savedJobsKey = 'saved_jobs';
   static const String _appliedJobsKey = 'applied_jobs';
+  static const String _rejectedJobsKey = 'rejected_jobs';
   static SharedPreferences? _prefs;
 
-  // Initialize shared preferences
   static Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
   }
 
-  // Get list of applied jobs for current user
-  static List<Job> getAppliedJobs() {
+  static Future<bool> applyToJob(Job job) async {
     final user = AuthService.getCurrentUser();
-    if (user == null || _prefs == null) return [];
+    if (user == null) return false;
 
-    final appliedJobsJson = _prefs!.getString('${_appliedJobsKey}_${user.id}') ?? '[]';
-    final List<dynamic> jobsList = json.decode(appliedJobsJson);
-    return jobsList.map((json) => Job.fromJson(json)).toList();
-  }
-
-  static Future<void> applyToJob(
-    BuildContext context,
-    Job job, {
-    required Function(bool) onApplicationComplete,
-  }) async {
-    final user = AuthService.getCurrentUser();
-    
-    // Check if user is logged in
-    if (user == null) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please log in to apply for jobs'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        onApplicationComplete(false);
-      }
-      return;
-    }
-
-    final Uri emailLaunchUri = Uri(
-      scheme: 'mailto',
-      path: job.applicationMethod.value,
-      queryParameters: {
-        'subject': 'Application for ${job.title} position at ${job.company}',
-        'body': '''
-Dear Hiring Manager,
-
-I am writing to express my interest in the ${job.title} position at ${job.company}. I found this opportunity through JobGlide and I am excited about the possibility of joining your team.
-
-I am ${user.preferences?.profession ?? 'a professional'} with experience in the field. Based on the job requirements, I believe my skills and experience make me a strong candidate for this role.
-
-${job.applicationMethod.instructions ?? 'Please include your resume and portfolio in the email.'}
-
-Best regards,
-${user.name ?? 'Applicant'}
-''',
-      },
+    // Send the application email
+    final emailSent = await EmailService.sendJobApplication(
+      user: user,
+      job: job,
     );
 
-    try {
-      await launchUrl(emailLaunchUri);
-      
-      // Show confirmation dialog after email is launched
-      if (context.mounted) {
-        showDialog<bool>(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('Confirm Application'),
-              content: const Text('Did you send the application email?'),
-              actions: <Widget>[
-                TextButton(
-                  child: const Text('No'),
-                  onPressed: () {
-                    onApplicationComplete(false);
-                    Navigator.of(context).pop();
-                    _saveAppliedJob(job, 'Not Sent');
-                  },
-                ),
-                TextButton(
-                  child: const Text('Yes, I sent it'),
-                  onPressed: () {
-                    onApplicationComplete(true);
-                    Navigator.of(context).pop();
-                    _saveAppliedJob(job, 'Applied');
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Application marked as sent! View it in your Applications tab.'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  },
-                ),
-              ],
-            );
-          },
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not launch email application'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        onApplicationComplete(false);
-      }
+    if (emailSent) {
+      await _saveJobToList(job, _appliedJobsKey, JobStatus.applied);
+      return true;
+    }
+    return false;
+  }
+
+  static Future<void> saveJob(Job job) async {
+    await _saveJobToList(job, _savedJobsKey, JobStatus.saved);
+  }
+
+  static Future<void> rejectJob(Job job) async {
+    await _saveJobToList(job, _rejectedJobsKey, JobStatus.rejected);
+  }
+
+  static Future<void> deleteJob(Job job, JobStatus status) async {
+    if (_prefs == null) {
+      _prefs = await SharedPreferences.getInstance();
+    }
+
+    final user = AuthService.getCurrentUser();
+    if (user == null) return;
+
+    final key = status == JobStatus.saved ? _savedJobsKey : _appliedJobsKey;
+    final userKey = '${key}_${user.id}';
+    
+    // Get existing jobs
+    final jobsJson = _prefs!.getString(userKey) ?? '[]';
+    final List<dynamic> jobs = json.decode(jobsJson);
+    
+    // Remove the job with matching id
+    final updatedJobs = jobs.where((j) => j['id'] != job.id).toList();
+    
+    // Save back to preferences
+    await _prefs!.setString(userKey, json.encode(updatedJobs));
+
+    // Check if job is already in rejected list
+    final rejectedJobs = await getRejectedJobs();
+    if (!rejectedJobs.any((j) => j.id == job.id)) {
+      // Add to rejected jobs only if not already there
+      await rejectJob(job);
     }
   }
 
-  static Future<void> _saveAppliedJob(Job job, String status) async {
-    final user = AuthService.getCurrentUser();
-    if (user == null || _prefs == null) return;
-
-    final appliedJobs = getAppliedJobs();
-    if (!appliedJobs.any((j) => j.id == job.id)) {
-      final jobWithStatus = {
-        ...job.toJson(),
-        'applicationStatus': status,
-        'appliedDate': DateTime.now().toIso8601String(),
-      };
-      
-      final jobs = [...appliedJobs.map((j) => j.toJson()), jobWithStatus];
-      await _prefs!.setString('${_appliedJobsKey}_${user.id}', json.encode(jobs));
+  static Future<void> _saveJobToList(Job job, String key, JobStatus status) async {
+    if (_prefs == null) {
+      _prefs = await SharedPreferences.getInstance();
     }
+
+    final user = AuthService.getCurrentUser();
+    if (user == null) return;
+
+    final userKey = '${key}_${user.id}';
+    
+    // Get existing jobs from all lists to check for duplicates
+    final savedJobs = await getSavedJobs();
+    final appliedJobs = await getAppliedJobs();
+    final rejectedJobs = await getRejectedJobs();
+    
+    // Remove job from other lists if it exists
+    if (key != _savedJobsKey && savedJobs.any((j) => j.id == job.id)) {
+      await deleteJob(job, JobStatus.saved);
+    }
+    if (key != _appliedJobsKey && appliedJobs.any((j) => j.id == job.id)) {
+      await deleteJob(job, JobStatus.applied);
+    }
+    if (key != _rejectedJobsKey && rejectedJobs.any((j) => j.id == job.id)) {
+      // Remove from rejected list
+      final rejectedKey = '${_rejectedJobsKey}_${user.id}';
+      final rejectedJobsJson = _prefs!.getString(rejectedKey) ?? '[]';
+      final List<dynamic> rejectedJobsList = json.decode(rejectedJobsJson);
+      final updatedRejectedJobs = rejectedJobsList.where((j) => j['id'] != job.id).toList();
+      await _prefs!.setString(rejectedKey, json.encode(updatedRejectedJobs));
+    }
+
+    // Get current list jobs
+    final jobsJson = _prefs!.getString(userKey) ?? '[]';
+    final List<dynamic> jobs = json.decode(jobsJson);
+    
+    // Add new job if not already in this list
+    if (!jobs.any((j) => j['id'] == job.id)) {
+      final jobJson = {
+        ...job.toJson(),
+        'isRemote': job.isRemote,
+        'profession': job.profession,
+        'postedDate': job.postedDate.toIso8601String(),
+        'status': status.toString(),
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+
+      jobs.add(jobJson);
+
+      // Save back to preferences
+      await _prefs!.setString(userKey, json.encode(jobs));
+    }
+  }
+
+  static Future<void> restoreJob(Job job) async {
+    // First remove from rejected list
+    final user = AuthService.getCurrentUser();
+    if (user == null) return;
+
+    final rejectedKey = '${_rejectedJobsKey}_${user.id}';
+    final rejectedJobsJson = _prefs!.getString(rejectedKey) ?? '[]';
+    final List<dynamic> rejectedJobs = json.decode(rejectedJobsJson);
+    final updatedRejectedJobs = rejectedJobs.where((j) => j['id'] != job.id).toList();
+    await _prefs!.setString(rejectedKey, json.encode(updatedRejectedJobs));
+
+    // Then add to saved list
+    await saveJob(job);
+  }
+
+  static Future<List<Job>> getSavedJobs() async {
+    return _getJobsFromList(_savedJobsKey);
+  }
+
+  static Future<List<Job>> getAppliedJobs() async {
+    return _getJobsFromList(_appliedJobsKey);
+  }
+
+  static Future<List<Job>> getRejectedJobs() async {
+    return _getJobsFromList(_rejectedJobsKey);
+  }
+
+  static Future<List<Job>> _getJobsFromList(String key) async {
+    if (_prefs == null) {
+      _prefs = await SharedPreferences.getInstance();
+    }
+
+    final user = AuthService.getCurrentUser();
+    if (user == null) return [];
+
+    final userKey = '${key}_${user.id}';
+    final jobsJson = _prefs!.getString(userKey) ?? '[]';
+    final List<dynamic> jobs = json.decode(jobsJson);
+    
+    return jobs.map((jobJson) {
+      // Ensure all required fields have default values
+      final Map<String, dynamic> safeJson = {
+        'id': jobJson['id'] ?? 'unknown',
+        'title': jobJson['title'] ?? 'Unknown Job',
+        'company': jobJson['company'] ?? 'Unknown Company',
+        'location': jobJson['location'] ?? 'Remote',
+        'description': jobJson['description'] ?? 'No description available',
+        'requirements': jobJson['requirements'] ?? [],
+        'jobType': jobJson['jobType'] ?? JobType.fullTime.toString(),
+        'isRemote': jobJson['isRemote'] ?? false,
+        'profession': jobJson['profession'] ?? 'Unknown',
+        'salary': jobJson['salary'] ?? 'Competitive',
+        'postedDate': jobJson['postedDate'] ?? DateTime.now().toIso8601String(),
+        'applicationMethod': jobJson['applicationMethod'] ?? {
+          'type': 'email',
+          'value': 'unknown@example.com',
+        },
+        'companyWebsite': jobJson['companyWebsite'],
+        'status': jobJson['status'],
+        'timestamp': jobJson['timestamp'],
+      };
+      return Job.fromJson(safeJson);
+    }).toList();
   }
 }

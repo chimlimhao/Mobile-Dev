@@ -37,43 +37,45 @@ enum JobStatus {
 }
 
 class UserPreferences {
-  final String profession;
+  final List<String> professions;
   final bool remoteOnly;
   final List<JobType> preferredJobTypes;
 
   const UserPreferences({
-    required this.profession,
+    required this.professions,
     required this.remoteOnly,
     required this.preferredJobTypes,
   });
 
   Map<String, dynamic> toJson() {
     return {
-      'profession': profession,
+      'professions': professions,
       'remoteOnly': remoteOnly,
-      'preferredJobTypes': preferredJobTypes.map((e) => e.toString().split('.').last).toList(),
+      'preferredJobTypes': preferredJobTypes.map((t) => t.toString()).toList(),
     };
   }
 
   factory UserPreferences.fromJson(Map<String, dynamic> json) {
     return UserPreferences(
-      profession: json['profession'] as String,
-      remoteOnly: json['remoteOnly'] as bool,
-      preferredJobTypes: (json['preferredJobTypes'] as List)
-          .map((e) => JobType.values.firstWhere(
-                (type) => type.toString().split('.').last == e,
-              ))
-          .toList(),
+      professions: List<String>.from(json['professions'] ?? []),
+      remoteOnly: json['remoteOnly'] ?? false,
+      preferredJobTypes: (json['preferredJobTypes'] as List?)
+              ?.map((t) => JobType.values.firstWhere(
+                    (e) => e.toString() == t,
+                    orElse: () => JobType.fullTime,
+                  ))
+              .toList() ??
+          [],
     );
   }
 
   UserPreferences copyWith({
-    String? profession,
+    List<String>? professions,
     bool? remoteOnly,
     List<JobType>? preferredJobTypes,
   }) {
     return UserPreferences(
-      profession: profession ?? this.profession,
+      professions: professions ?? this.professions,
       remoteOnly: remoteOnly ?? this.remoteOnly,
       preferredJobTypes: preferredJobTypes ?? this.preferredJobTypes,
     );
@@ -191,8 +193,8 @@ class Job {
   final DateTime postedDate;
   final String salary;
   final String? companyWebsite;
-  final String? applicationStatus;  // Added for tracking application status
-  final DateTime? appliedDate;      // Added for tracking when user applied
+  final String? applicationStatus;
+  final DateTime? appliedDate;
 
   const Job({
     required this.id,
@@ -212,7 +214,6 @@ class Job {
     this.appliedDate,
   });
 
-  // Convert Job to JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -220,8 +221,8 @@ class Job {
       'company': company,
       'location': location,
       'description': description,
-      'requirements': requirements.toList(),
-      'jobType': jobType.toString().split('.').last,
+      'requirements': requirements,
+      'jobType': jobType.toString(),
       'isRemote': isRemote,
       'profession': profession,
       'applicationMethod': applicationMethod.toJson(),
@@ -233,32 +234,46 @@ class Job {
     };
   }
 
-  // Create Job from JSON
   factory Job.fromJson(Map<String, dynamic> json) {
+    // Helper function to safely cast to List<String>
+    List<String> safeStringList(dynamic value) {
+      if (value is List) {
+        return value.map((e) => e?.toString() ?? '').toList();
+      }
+      return [];
+    }
+
     return Job(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      company: json['company'] as String,
-      location: json['location'] as String,
-      description: json['description'] as String,
-      requirements: (json['requirements'] as List).map((e) => e.toString()).toList(),
+      id: json['id']?.toString() ?? 'unknown',
+      title: json['title']?.toString() ?? 'Unknown Job',
+      company: json['company']?.toString() ?? 'Unknown Company',
+      location: json['location']?.toString() ?? 'Remote',
+      description: json['description']?.toString() ?? 'No description available',
+      requirements: safeStringList(json['requirements']),
       jobType: JobType.values.firstWhere(
-        (type) => type.toString().split('.').last == json['jobType'],
+        (e) => e.toString() == json['jobType'],
+        orElse: () => JobType.fullTime,
       ),
-      isRemote: json['isRemote'] as bool,
-      profession: json['profession'] as String,
-      applicationMethod: ApplicationMethod.fromJson(json['applicationMethod'] as Map<String, dynamic>),
-      postedDate: DateTime.parse(json['postedDate'] as String),
-      salary: json['salary'] as String,
-      companyWebsite: json['companyWebsite'] as String?,
-      applicationStatus: json['applicationStatus'] as String?,
-      appliedDate: json['appliedDate'] != null ? DateTime.parse(json['appliedDate'] as String) : null,
+      isRemote: json['isRemote'] as bool? ?? false,
+      profession: json['profession']?.toString() ?? 'Unknown',
+      applicationMethod: json['applicationMethod'] is Map 
+          ? ApplicationMethod.fromJson(json['applicationMethod'] as Map<String, dynamic>)
+          : ApplicationMethod(type: 'email', value: 'unknown@example.com'),
+      postedDate: json['postedDate'] != null 
+          ? DateTime.parse(json['postedDate'] as String)
+          : DateTime.now(),
+      salary: json['salary']?.toString() ?? 'Competitive',
+      companyWebsite: json['companyWebsite']?.toString(),
+      applicationStatus: json['status']?.toString(),
+      appliedDate: json['timestamp'] != null 
+          ? DateTime.parse(json['timestamp'] as String)
+          : null,
     );
   }
 }
 
 class JobFilter {
-  final String? searchQuery;
+  final List<String>? professions;
   final List<JobType>? jobTypes;
   final bool? remoteOnly;
   final String? location;
@@ -266,7 +281,7 @@ class JobFilter {
   final String? maxSalary;
 
   const JobFilter({
-    this.searchQuery,
+    this.professions,
     this.jobTypes,
     this.remoteOnly,
     this.location,
@@ -275,7 +290,7 @@ class JobFilter {
   });
 
   JobFilter copyWith({
-    String? searchQuery,
+    List<String>? professions,
     List<JobType>? jobTypes,
     bool? remoteOnly,
     String? location,
@@ -283,7 +298,7 @@ class JobFilter {
     String? maxSalary,
   }) {
     return JobFilter(
-      searchQuery: searchQuery ?? this.searchQuery,
+      professions: professions ?? this.professions,
       jobTypes: jobTypes ?? this.jobTypes,
       remoteOnly: remoteOnly ?? this.remoteOnly,
       location: location ?? this.location,
@@ -293,16 +308,6 @@ class JobFilter {
   }
 
   bool matches(Job job) {
-    // Search query check
-    if (searchQuery?.isNotEmpty ?? false) {
-      final query = searchQuery!.toLowerCase();
-      if (!job.title.toLowerCase().contains(query) &&
-          !job.company.toLowerCase().contains(query) &&
-          !job.description.toLowerCase().contains(query)) {
-        return false;
-      }
-    }
-
     // Job type check
     if (jobTypes?.isNotEmpty ?? false) {
       if (!jobTypes!.contains(job.jobType)) {
@@ -320,6 +325,19 @@ class JobFilter {
     // Location check
     if (location?.isNotEmpty ?? false) {
       if (!job.location.toLowerCase().contains(location!.toLowerCase())) {
+        return false;
+      }
+    }
+
+    // Profession check
+    if (professions?.isNotEmpty ?? false) {
+      bool matchesAnyProfession = professions!.any((p) {
+        final pLower = p.toLowerCase();
+        return job.profession.toLowerCase() == pLower ||
+               job.title.toLowerCase().contains(pLower) ||
+               job.description.toLowerCase().contains(pLower);
+      });
+      if (!matchesAnyProfession) {
         return false;
       }
     }

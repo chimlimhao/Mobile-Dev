@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+// import 'package:jobglide/screens/onboarding_screen.dart';
 import 'package:jobglide/screens/main/job_screen.dart';
-import 'package:jobglide/services/storage_service.dart';
-import 'package:jobglide/services/auth_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -14,10 +13,10 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _navigateToHome();
+    _navigateToOnboarding();
   }
 
-  Future<void> _navigateToHome() async {
+  Future<void> _navigateToOnboarding() async {
     await Future.delayed(const Duration(seconds: 2));
     if (mounted) {
       Navigator.of(context).pushReplacement(
@@ -31,33 +30,23 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.primary,
+      backgroundColor: const Color(0xFFF5F8FF), // Light pastel blue background
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // App logo
-            Icon(
-              Icons.work_outline,
-              size: 80,
-              color: Theme.of(context).colorScheme.onPrimary,
-            ),
-            const SizedBox(height: 24),
-            // App name
-            Text(
-              'JobGlide',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onPrimary,
+        child: Text(
+          'JobGlide',
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF6750A4),
+            letterSpacing: 1.2,
+            shadows: [
+              Shadow(
+                color: Colors.blue.withOpacity(0.2),
+                offset: const Offset(0, 4),
+                blurRadius: 8,
               ),
-            ),
-            const SizedBox(height: 16),
-            // Loading indicator
-            CircularProgressIndicator(
-              color: Theme.of(context).colorScheme.onPrimary,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

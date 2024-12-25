@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:jobglide/models/model.dart';
-import 'package:jobglide/widgets/job_swiper.dart';
+import 'package:jobglide/widgets/content/job_swiper.dart';
 
 class JobContent extends StatelessWidget {
   final CardSwiperController cardController;
@@ -31,25 +31,12 @@ class JobContent extends StatelessWidget {
       return const EmptyJobsView();
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.blue.shade100.withOpacity(0.8),
-            Colors.blue.shade100,
-          ],
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: JobSwiper(
-          controller: cardController,
-          jobs: filteredJobs,
-          onSwipeRight: onSwipeRight,
-          onSwipeLeft: onSwipeLeft,
-        ),
+    return SafeArea(
+      child: JobSwiper(
+        controller: cardController,
+        jobs: filteredJobs,
+        onSwipeRight: onSwipeRight,
+        onSwipeLeft: onSwipeLeft,
       ),
     );
   }
