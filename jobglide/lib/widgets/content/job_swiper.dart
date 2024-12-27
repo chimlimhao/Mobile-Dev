@@ -87,10 +87,10 @@ class _JobSwiperState extends State<JobSwiper> {
                 controller: widget.controller,
                 cardsCount: widget.jobs.length,
                 numberOfCardsDisplayed: widget.jobs.length > 1 ? 2 : 1,
-                backCardOffset: widget.jobs.length > 1
-                    ? const Offset(0, 40)
-                    : const Offset(0, 0),
-                scale: 0.95,
+                // backCardOffset: widget.jobs.length > 1
+                //     ? const Offset(0, 40)
+                //     : const Offset(0, 0),
+                // scale: 0.95,
                 padding: const EdgeInsets.symmetric(vertical: 20),
                 onSwipe: (previousIndex, currentIndex, direction) {
                   if (previousIndex >= widget.jobs.length) return true;

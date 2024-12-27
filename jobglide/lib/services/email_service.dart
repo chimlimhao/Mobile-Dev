@@ -1,13 +1,15 @@
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
 import '../models/models.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/material.dart';
 
 class EmailService {
   // These would typically come from environment variables or secure storage
-  static const String _smtpHost = 'smtp.gmail.com';
-  static const int _smtpPort = 587;
-  static const String _username = 'tonoforlife@gmail.com';
-  static const String _password = 'caca sgei vrms vbci';
+  static final String _smtpHost = dotenv.env['SMTPHOST'] ?? '';
+  static final int _smtpPort = int.parse(dotenv.env['SMTPPORT'] ?? '');
+  static final String _username = dotenv.env['USERNAME'] ?? '';
+  static final String _password = dotenv.env['PASSWORD'] ?? '';
 
   static SmtpServer get _smtpServer => SmtpServer(
         _smtpHost,
@@ -30,7 +32,7 @@ class EmailService {
 
       // Create the email message
       final message = Message()
-        ..from = const Address(_username, 'JobGlide App')
+        ..from = Address(_username, 'JobGlide App')
         ..recipients.add(job.applicationMethod.value)
         ..subject = 'Application for ${job.title} position at ${job.company}'
         ..text = '''
@@ -58,11 +60,11 @@ ${user.email}
 
       if (_username == 'your.email@gmail.com') {
         // Demo mode - just print the email
-        print('\n--- Email that would be sent ---');
-        print('To: ${job.applicationMethod.value}');
-        print('Subject: ${message.subject}');
-        print('Body:\n${message.text}');
-        print('---------------------------\n');
+        debugPrint('\n--- Email that would be sent ---');
+        debugPrint('To: ${job.applicationMethod.value}');
+        debugPrint('Subject: ${message.subject}');
+        debugPrint('Body:\n${message.text}');
+        debugPrint('---------------------------\n');
         return true;
       }
 
@@ -70,7 +72,7 @@ ${user.email}
       await send(message, _smtpServer);
       return true;
     } catch (e) {
-      print('Error sending email: $e');
+      debugPrint('Error sending email: $e');
       return false;
     }
   }
@@ -80,9 +82,6 @@ ${user.email}
     required String username,
     required String password,
   }) {
-    // In a real app, you'd store these securely
-    // For demo, we'll just update the static fields
-    // _username = username;
-    // _password = password;
+    return;
   }
 }

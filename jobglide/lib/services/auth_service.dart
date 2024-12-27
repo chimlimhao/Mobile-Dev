@@ -1,12 +1,15 @@
 import 'package:jobglide/models/models.dart';
+import 'package:uuid/uuid.dart';
+
+const Uuid uuid = Uuid();
 
 class AuthService {
-  static User _mockUser = const User(
-    id: '1',
+  static User _mockUser = User(
+    id: uuid.v4(),
     email: 'limhao@gmail.com',
     name: 'Chim Limhao',
     autoApplyEnabled: false,
-    preferences: UserPreferences(
+    preferences: const UserPreferences(
       professions: ['Software Developer'],
       remoteOnly: true,
       preferredJobTypes: [JobType.fullTime, JobType.contract],

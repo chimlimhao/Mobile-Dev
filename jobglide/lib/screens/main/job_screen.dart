@@ -31,7 +31,7 @@ class _JobScreenState extends State<JobScreen> {
   }
 
   Future<void> _loadJobs() async {
-    final user = AuthService.getCurrentUser();
+    // final user = AuthService.getCurrentUser();
     final savedJobs = await ApplicationService.getSavedJobs();
     final appliedJobs = await ApplicationService.getAppliedJobs();
     final rejectedJobs = await ApplicationService.getRejectedJobs();
@@ -477,7 +477,7 @@ class _JobListViewState extends State<JobListView> {
         }
       }
     } catch (e) {
-      print('Error applying preferences: $e');
+      debugPrint('Error applying preferences: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:jobglide/screens/splash_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() {
+void main() async {
+  await dotenv.load();
   runApp(const MyApp());
 }
 
@@ -11,6 +13,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'JobGlide',
       theme: ThemeData(
         useMaterial3: true,
@@ -18,8 +21,8 @@ class MyApp extends StatelessWidget {
           seedColor: const Color(0xFF6750A4),
           brightness: Brightness.light,
         ).copyWith(
-          secondary: const Color(0xFF9C27B0), 
-          tertiary: const Color(0xFFE1BEE7), 
+          secondary: const Color(0xFF9C27B0),
+          tertiary: const Color(0xFFE1BEE7),
         ),
         scaffoldBackgroundColor: Colors.white,
         appBarTheme: const AppBarTheme(
