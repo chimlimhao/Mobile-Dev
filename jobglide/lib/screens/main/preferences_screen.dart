@@ -100,13 +100,11 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Preferences'),
-        // backgroundColor: const Color(0xFF6750A4),
         foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: Column(
         children: [
-          // Search Bar Section
           Container(
             color: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -141,8 +139,6 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
               ],
             ),
           ),
-
-          // Selected Professions
           if (_selectedProfessions.isNotEmpty)
             Container(
               color: Colors.white,
@@ -185,19 +181,13 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 }).toList(),
               ),
             ),
-
-          // Divider
           if (_selectedProfessions.isNotEmpty)
             const Divider(height: 1, thickness: 1),
-
-          // Main Content
           Expanded(
             child: _showSuggestions && _suggestions.isNotEmpty
                 ? _buildSuggestionsList()
                 : _buildPreferencesContent(),
           ),
-
-          // Done Button
           Container(
             padding: const EdgeInsets.all(16),
             child: SizedBox(

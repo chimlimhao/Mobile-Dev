@@ -59,8 +59,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (!widget
-                      .isSaved) // Show application status for applied jobs
+                  if (!widget.isSaved)
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 6),
@@ -244,7 +243,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 ],
               ),
             )
-          : null, // Don't show apply button for applied jobs
+          : null,
     );
   }
 

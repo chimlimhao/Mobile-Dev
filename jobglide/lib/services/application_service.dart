@@ -180,7 +180,6 @@ class ApplicationService {
     final List<dynamic> jobs = json.decode(jobsJson);
 
     return jobs.map((jobJson) {
-      // Ensure all required fields have default values
       final Map<String, dynamic> safeJson = {
         'id': jobJson['id'] ?? 'unknown',
         'title': jobJson['title'] ?? 'Unknown Job',
@@ -226,13 +225,8 @@ class ApplicationService {
     _prefs ??= await SharedPreferences.getInstance();
     final user = AuthService.getCurrentUser();
 
-    // Clear saved jobs
     await _prefs!.remove('${_savedJobsKey}_${user.id}');
-
-    // Clear applied jobs
     await _prefs!.remove('${_appliedJobsKey}_${user.id}');
-
-    // Clear rejected jobs
     await _prefs!.remove('${_rejectedJobsKey}_${user.id}');
   }
 }

@@ -9,7 +9,6 @@ class ApplicationMethod {
     this.instructions,
   });
 
-  // Convert ApplicationMethod to JSON
   Map<String, dynamic> toJson() {
     return {
       'type': type,
@@ -18,7 +17,6 @@ class ApplicationMethod {
     };
   }
 
-  // Create ApplicationMethod from JSON
   factory ApplicationMethod.fromJson(Map<String, dynamic> json) {
     return ApplicationMethod(
       type: json['type'] as String,

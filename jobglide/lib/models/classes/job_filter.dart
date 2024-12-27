@@ -37,28 +37,24 @@ class JobFilter {
   }
 
   bool matches(Job job) {
-    // Job type check
     if (jobTypes?.isNotEmpty ?? false) {
       if (!jobTypes!.contains(job.jobType)) {
         return false;
       }
     }
 
-    // Remote work check
     if (remoteOnly ?? false) {
       if (!job.isRemote) {
         return false;
       }
     }
 
-    // Location check
     if (location?.isNotEmpty ?? false) {
       if (!job.location.toLowerCase().contains(location!.toLowerCase())) {
         return false;
       }
     }
 
-    // Profession check
     if (professions?.isNotEmpty ?? false) {
       bool matchesAnyProfession = professions!.any((p) {
         final pLower = p.toLowerCase();

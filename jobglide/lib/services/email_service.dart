@@ -5,7 +5,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/material.dart';
 
 class EmailService {
-  // These would typically come from environment variables or secure storage
   static final String _smtpHost = dotenv.env['SMTPHOST'] ?? '';
   static final int _smtpPort = int.parse(dotenv.env['SMTPPORT'] ?? '');
   static final String _username = dotenv.env['USERNAME'] ?? '';
@@ -30,7 +29,6 @@ class EmailService {
       final mainProfession =
           professionsList.isNotEmpty ? professionsList.first : job.profession;
 
-      // Create the email message
       final message = Message()
         ..from = Address(_username, 'JobGlide App')
         ..recipients.add(job.applicationMethod.value)
@@ -59,7 +57,6 @@ ${user.email}
 ''';
 
       if (_username == 'your.email@gmail.com') {
-        // Demo mode - just print the email
         debugPrint('\n--- Email that would be sent ---');
         debugPrint('To: ${job.applicationMethod.value}');
         debugPrint('Subject: ${message.subject}');
@@ -68,7 +65,6 @@ ${user.email}
         return true;
       }
 
-      // Send the email and assume success if no exception is thrown
       await send(message, _smtpServer);
       return true;
     } catch (e) {
@@ -77,7 +73,6 @@ ${user.email}
     }
   }
 
-  /// Configure the email service with your credentials
   static void configure({
     required String username,
     required String password,

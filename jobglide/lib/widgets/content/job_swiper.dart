@@ -27,7 +27,6 @@ class _JobSwiperState extends State<JobSwiper> {
   @override
   void didUpdateWidget(JobSwiper oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Only show empty state if we have no jobs and the old widget had jobs
     if (widget.jobs.isEmpty && oldWidget.jobs.isNotEmpty) {
       setState(() {
         _showEmptyState = true;
@@ -70,12 +69,10 @@ class _JobSwiperState extends State<JobSwiper> {
 
   @override
   Widget build(BuildContext context) {
-    // Only show empty state if explicitly set and we have no jobs
     if (_showEmptyState && widget.jobs.isEmpty) {
       return _buildEmptyState();
     }
 
-    // If we have jobs, always try to show them
     if (widget.jobs.isNotEmpty) {
       return LayoutBuilder(
         builder: (context, constraints) {
@@ -87,10 +84,6 @@ class _JobSwiperState extends State<JobSwiper> {
                 controller: widget.controller,
                 cardsCount: widget.jobs.length,
                 numberOfCardsDisplayed: widget.jobs.length > 1 ? 2 : 1,
-                // backCardOffset: widget.jobs.length > 1
-                //     ? const Offset(0, 40)
-                //     : const Offset(0, 0),
-                // scale: 0.95,
                 padding: const EdgeInsets.symmetric(vertical: 20),
                 onSwipe: (previousIndex, currentIndex, direction) {
                   if (previousIndex >= widget.jobs.length) return true;
@@ -119,8 +112,6 @@ class _JobSwiperState extends State<JobSwiper> {
       );
     }
 
-    // If we're here, we have no jobs but haven't confirmed we're empty
-    // Show a loading-like state instead of empty state
     return const Center(
       child: CircularProgressIndicator(),
     );

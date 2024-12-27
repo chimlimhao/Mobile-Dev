@@ -28,10 +28,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Leading section
           leading ?? const SizedBox(width: 48),
-
-          // Title section
           Text(
             title,
             style: theme.textTheme.titleLarge?.copyWith(
@@ -39,15 +36,13 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-
-          // Actions section
           if (actions != null)
             Row(
               mainAxisSize: MainAxisSize.min,
               children: actions!,
             )
           else
-            const SizedBox(width: 48), // Balance the layout when no actions
+            const SizedBox(width: 48),
         ],
       ),
     );
@@ -57,7 +52,6 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }
 
-// Helper widget for filter button
 class FilterButton extends StatelessWidget {
   final VoidCallback? onPressed;
 
@@ -182,7 +176,6 @@ class JobGlideTitle extends StatelessWidget {
       style: TextStyle(
         color: Colors.purple,
         fontSize: 24,
-        // fontWeight: FontWeight.bold,
       ),
     );
   }

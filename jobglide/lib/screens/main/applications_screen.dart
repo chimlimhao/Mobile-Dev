@@ -128,43 +128,37 @@ class _ApplicationsScreenState extends State<ApplicationsScreen>
             ),
           ),
           onDismissed: (direction) async {
-            // Remove job from the list immediately
             final jobsList = isSaved ? widget.savedJobs : widget.appliedJobs;
             final jobIndex = jobsList.indexOf(job);
             setState(() {
               jobsList.removeAt(jobIndex);
             });
 
-            // Delete from storage
             await ApplicationService.deleteJob(
               job,
               isSaved ? JobStatus.saved : JobStatus.applied,
             );
 
-            // Update parent state
             widget.onJobStatusChanged(job, JobStatus.rejected);
 
-            // Show snackbar with undo option
             if (!mounted) return;
+
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('${job.title} removed'),
                 action: SnackBarAction(
                   label: 'Undo',
                   onPressed: () async {
-                    // Re-add job to the list
                     setState(() {
                       jobsList.insert(jobIndex, job);
                     });
 
-                    // Re-save to storage
                     if (isSaved) {
                       await ApplicationService.saveJob(job);
                     } else {
                       await ApplicationService.applyToJob(job);
                     }
 
-                    // Update parent state
                     widget.onJobStatusChanged(
                       job,
                       isSaved ? JobStatus.saved : JobStatus.applied,

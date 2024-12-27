@@ -31,7 +31,6 @@ class _JobScreenState extends State<JobScreen> {
   }
 
   Future<void> _loadJobs() async {
-    // final user = AuthService.getCurrentUser();
     final savedJobs = await ApplicationService.getSavedJobs();
     final appliedJobs = await ApplicationService.getAppliedJobs();
     final rejectedJobs = await ApplicationService.getRejectedJobs();
@@ -51,12 +50,10 @@ class _JobScreenState extends State<JobScreen> {
 
   void _updateJobStatus(Job job, JobStatus status) {
     setState(() {
-      // Remove from all lists first
       _savedJobs.remove(job);
       _appliedJobs.remove(job);
       _rejectedJobs.remove(job);
 
-      // Add to appropriate list
       switch (status) {
         case JobStatus.saved:
           _savedJobs.add(job);
@@ -73,7 +70,6 @@ class _JobScreenState extends State<JobScreen> {
     });
   }
 
-  // Add a key to force rebuild of JobListView
   final _jobListKey = GlobalKey();
 
   Widget _buildBody() {
@@ -99,7 +95,7 @@ class _JobScreenState extends State<JobScreen> {
               _savedJobs.clear();
               _appliedJobs.clear();
               _rejectedJobs.clear();
-              // Force rebuild of JobListView with a new key
+
               _jobListKey.currentState?.setState(() {});
             });
           },
@@ -155,7 +151,6 @@ class _JobListViewState extends State<JobListView> {
   @override
   void didUpdateWidget(JobListView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Check if any of the job lists have changed or if they're empty
     if (oldWidget.savedJobs.length != widget.savedJobs.length ||
         oldWidget.appliedJobs.length != widget.appliedJobs.length ||
         oldWidget.rejectedJobs.length != widget.rejectedJobs.length ||
@@ -173,7 +168,7 @@ class _JobListViewState extends State<JobListView> {
 
     try {
       final availableJobs = await ApplicationService.getAvailableJobs();
-      print('Available jobs: ${availableJobs.length}');
+      debugPrint('Available jobs: ${availableJobs.length}');
 
       if (!mounted) return;
 
@@ -181,19 +176,17 @@ class _JobListViewState extends State<JobListView> {
       final preferences = user.preferences;
 
       List<Job> filteredJobs = List<Job>.from(availableJobs);
-      print(
+      debugPrint(
           'User preferences: ${preferences.professions}, Remote: ${preferences.remoteOnly}, Types: ${preferences.preferredJobTypes}');
 
-      // First, remove any jobs that are already in saved, applied, or rejected lists
       filteredJobs = filteredJobs.where((job) {
         return !widget.savedJobs.any((j) => j.id == job.id) &&
             !widget.appliedJobs.any((j) => j.id == job.id) &&
             !widget.rejectedJobs.any((j) => j.id == job.id);
       }).toList();
 
-      print('Jobs after removing interactions: ${filteredJobs.length}');
+      debugPrint('Jobs after removing interactions: ${filteredJobs.length}');
 
-      // Then apply preference filters
       if (preferences.professions.isNotEmpty ||
           preferences.remoteOnly ||
           preferences.preferredJobTypes.isNotEmpty) {
@@ -202,7 +195,6 @@ class _JobListViewState extends State<JobListView> {
           bool matchesRemote = true;
           bool matchesProfession = true;
 
-          // Helper function to check if a job is software development related
           bool isSoftwareJob(Job j) {
             final titleLower = j.title.toLowerCase();
             final professionLower = j.profession.toLowerCase();
@@ -225,12 +217,10 @@ class _JobListViewState extends State<JobListView> {
                 descriptionLower.contains(keyword));
           }
 
-          // Check job type - allow both full time and contract for software roles
           if (preferences.preferredJobTypes.isNotEmpty) {
             final bool isSoftwareDev = isSoftwareJob(job);
 
             if (isSoftwareDev) {
-              // For software jobs, be more lenient with job types
               matchesJobType = preferences.preferredJobTypes.any((type) =>
                   type == job.jobType ||
                   (type == JobType.fullTime &&
@@ -238,28 +228,23 @@ class _JobListViewState extends State<JobListView> {
                   (type == JobType.contract &&
                       job.jobType == JobType.fullTime));
             } else {
-              // For non-software jobs, strict matching
               matchesJobType =
                   preferences.preferredJobTypes.contains(job.jobType);
             }
           }
 
-          // Check remote preference - be more lenient for software roles
           if (preferences.remoteOnly) {
             matchesRemote = job.isRemote || isSoftwareJob(job);
           }
 
-          // Check profession with improved matching
           if (preferences.professions.isNotEmpty) {
             matchesProfession = preferences.professions.any((p) {
               final pLower = p.toLowerCase();
 
-              // If looking for software developer, match any software development role
               if (pLower.contains('software') || pLower.contains('developer')) {
                 return isSoftwareJob(job);
               }
 
-              // For other professions, do direct matching
               return job.profession.toLowerCase().contains(pLower) ||
                   job.title.toLowerCase().contains(pLower);
             });
@@ -269,13 +254,13 @@ class _JobListViewState extends State<JobListView> {
         }).toList();
       }
 
-      print('Final filtered jobs: ${filteredJobs.length}');
+      debugPrint('Final filtered jobs: ${filteredJobs.length}');
 
       if (!mounted) return;
 
       setState(() {
         _allJobs = List<Job>.from(availableJobs);
-        // Update filtered jobs list, keeping any existing jobs not in the new list
+
         final existingJobIds = _filteredJobs.map((j) => j.id).toSet();
         final newJobs =
             filteredJobs.where((job) => !existingJobIds.contains(job.id));
@@ -283,9 +268,9 @@ class _JobListViewState extends State<JobListView> {
         _isLoading = false;
       });
 
-      print('Current filtered jobs in state: ${_filteredJobs.length}');
+      debugPrint('Current filtered jobs in state: ${_filteredJobs.length}');
     } catch (e) {
-      print('Error loading jobs: $e');
+      debugPrint('Error loading jobs: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -341,10 +326,8 @@ class _JobListViewState extends State<JobListView> {
       }
 
       if (success && mounted) {
-        // Load more jobs first
         await _loadJobs();
 
-        // Then remove the swiped job
         if (mounted) {
           setState(() {
             _filteredJobs.removeWhere((j) => j.id == job.id);
@@ -377,10 +360,8 @@ class _JobListViewState extends State<JobListView> {
     });
 
     try {
-      // Load more jobs first
       await _loadJobs();
 
-      // Then store the job as rejected and update UI
       await ApplicationService.rejectJob(job);
 
       if (mounted) {
@@ -390,7 +371,7 @@ class _JobListViewState extends State<JobListView> {
         });
       }
     } catch (e) {
-      print('Error handling swipe left: $e');
+      debugPrint('Error handling swipe left: $e');
       if (mounted) {
         SnackbarUtils.showSnackBar(
           context,
@@ -413,11 +394,9 @@ class _JobListViewState extends State<JobListView> {
     });
 
     try {
-      // Get current user preferences
       final user = AuthService.getCurrentUser();
       final preferences = user.preferences;
 
-      // If no preferences are set, show all jobs
       if (preferences.professions.isEmpty &&
           !preferences.remoteOnly &&
           preferences.preferredJobTypes.isEmpty) {
@@ -428,21 +407,17 @@ class _JobListViewState extends State<JobListView> {
         return;
       }
 
-      // Apply filters based on preferences
       final filteredJobs = _allJobs.where((job) {
-        // Check job type
         if (preferences.preferredJobTypes.isNotEmpty) {
           if (!preferences.preferredJobTypes.contains(job.jobType)) {
             return false;
           }
         }
 
-        // Check remote preference
         if (preferences.remoteOnly && !job.isRemote) {
           return false;
         }
 
-        // Check profession
         if (preferences.professions.isNotEmpty) {
           bool matchesAnyProfession = preferences.professions.any((p) {
             final pLower = p.toLowerCase();
@@ -458,7 +433,6 @@ class _JobListViewState extends State<JobListView> {
         return true;
       }).toList();
 
-      // Remove any jobs that are already in saved, applied, or rejected lists
       final availableJobs = filteredJobs.where((job) {
         return !widget.savedJobs.any((j) => j.id == job.id) &&
             !widget.appliedJobs.any((j) => j.id == job.id) &&
@@ -471,7 +445,6 @@ class _JobListViewState extends State<JobListView> {
           _isLoading = false;
         });
 
-        // If we have too few jobs after filtering, load more
         if (_filteredJobs.length <= 2) {
           _loadJobs();
         }
@@ -501,7 +474,7 @@ class _JobListViewState extends State<JobListView> {
             context,
             MaterialPageRoute(builder: (context) => const PreferencesScreen()),
           );
-          // After returning from preferences screen, apply the new preferences
+
           if (mounted) {
             _applyUserPreferences();
           }

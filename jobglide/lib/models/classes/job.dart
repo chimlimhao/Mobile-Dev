@@ -57,7 +57,6 @@ class Job {
   }
 
   factory Job.fromJson(Map<String, dynamic> json) {
-    // Helper function to safely cast to List<String>
     List<String> safeStringList(dynamic value) {
       if (value is List) {
         return value.map((e) => e?.toString() ?? '').toList();
